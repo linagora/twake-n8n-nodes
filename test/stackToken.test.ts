@@ -85,8 +85,9 @@ test('asks to reconnect when the SSO refuses the refresh', async () => {
 	);
 });
 
-test('both packages ship the same exchange', () => {
+test('the cozy-stack packages ship the same exchange', () => {
 	const read = (name: string) =>
 		readFileSync(`packages/n8n-nodes-${name}/credentials/stackToken.ts`, 'utf8');
 	assert.equal(read('twakedrive'), read('twakesettings'));
+	assert.equal(read('twakedrive'), read('twakehome'));
 });

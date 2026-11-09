@@ -11,6 +11,7 @@
 | [`n8n-nodes-twakecontacts`](packages/n8n-nodes-twakecontacts) | Twake Contacts | List address books |
 | [`n8n-nodes-twakechat`](packages/n8n-nodes-twakechat) | Twake Chat | Current account |
 | [`n8n-nodes-twaketasks`](packages/n8n-nodes-twaketasks) | Twake Tasks | List projects |
+| [`n8n-nodes-twakehome`](packages/n8n-nodes-twakehome) | Twake Home | List apps |
 
 ## Development
 

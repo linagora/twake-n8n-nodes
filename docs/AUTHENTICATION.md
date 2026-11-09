@@ -33,6 +33,11 @@ dev yet.
 Twake Tasks calls its backend directly with the SSO access token (D8), which must carry the
 `twaketasks` audience. Its credential is `twakeTasksOAuth2Api`. Not tested on dev yet.
 
+## Twake Home
+
+Twake Home calls cozy-stack with a stack token obtained from `/auth/token_exchange`, like Twake
+Drive (D7). Its credential is `twakeHomeOAuth2Api`. Not tested on dev yet.
+
 ## Login
 
 1. An admin registers one confidential OIDC client on LemonLDAP, `n8n`, with the
