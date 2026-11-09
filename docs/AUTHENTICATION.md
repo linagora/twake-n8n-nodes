@@ -21,6 +21,13 @@ Twake Mail calls the JMAP server directly with the SSO access token (D8), which 
 Twake Contacts calls the calendar side service directly with the SSO access token (D8), which must
 carry the `openpaas` audience. Its credential is `twakeContactsOAuth2Api`. Not tested on dev yet.
 
+## Twake Chat
+
+Twake Chat calls the Matrix homeserver with a Matrix access token pasted in the credential, as Synapse
+refuses the SSO token (D11). Its credential is `twakeChatApi`. The token is separate from the SSO:
+revoking the login at the SSO does not end it, logging out that Matrix session does. Not tested on
+dev yet.
+
 ## Login
 
 1. An admin registers one confidential OIDC client on LemonLDAP, `n8n`, with the
