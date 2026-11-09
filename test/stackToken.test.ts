@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { beforeEach, test } from 'node:test';
 
 import type { IHttpRequestOptions } from 'n8n-workflow';
@@ -82,4 +83,10 @@ test('asks to reconnect when the SSO refuses the refresh', async () => {
 		exchangeForStackToken.call(helper as never, credentials),
 		/Connect it again/,
 	);
+});
+
+test('both packages ship the same exchange', () => {
+	const read = (name: string) =>
+		readFileSync(`packages/n8n-nodes-${name}/credentials/stackToken.ts`, 'utf8');
+	assert.equal(read('twakedrive'), read('twakesettings'));
 });

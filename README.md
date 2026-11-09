@@ -5,6 +5,7 @@
 | Package | Node | Features |
 | --- | --- | --- |
 | [`n8n-nodes-twakedrive`](packages/n8n-nodes-twakedrive) | Twake Drive | Files, folders and share links |
+| [`n8n-nodes-twakesettings`](packages/n8n-nodes-twakesettings) | Twake Settings | Disk usage |
 
 ## Development
 
