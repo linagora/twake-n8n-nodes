@@ -16,6 +16,11 @@ allows them.
 Twake Mail calls the JMAP server directly with the SSO access token (D8), which must carry the
 `james` audience. Its credential is `twakeMailOAuth2Api`. Not tested on dev yet.
 
+## Twake Contacts
+
+Twake Contacts calls the calendar side service directly with the SSO access token (D8), which must
+carry the `openpaas` audience. Its credential is `twakeContactsOAuth2Api`. Not tested on dev yet.
+
 ## Login
 
 1. An admin registers one confidential OIDC client on LemonLDAP, `n8n`, with the

@@ -8,6 +8,7 @@
 | [`n8n-nodes-twakesettings`](packages/n8n-nodes-twakesettings) | Twake Settings | Disk usage |
 | [`n8n-nodes-twakecalendar`](packages/n8n-nodes-twakecalendar) | Twake Calendar | List calendars |
 | [`n8n-nodes-twakemail`](packages/n8n-nodes-twakemail) | Twake Mail | JMAP session |
+| [`n8n-nodes-twakecontacts`](packages/n8n-nodes-twakecontacts) | Twake Contacts | List address books |
 
 ## Development
 
