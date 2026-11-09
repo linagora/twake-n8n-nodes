@@ -1,0 +1,99 @@
+# Authentication
+
+Current state of authentication in this repository, as of 2026-11-09. Only Twake Drive is implemented
+so far. The choices behind it are in [DECISION.md](DECISION.md).
+
+Measurements come from the dev environment on 2026-11-09, with n8n 2.46.6. Client secrets and tokens
+never go in this file.
+
+## Twake Drive
+
+Twake Drive calls cozy-stack with a stack token obtained from `/auth/token_exchange`. Its credential is
+`twakeDriveOAuth2Api`. Reads are tested on dev, and writes are refused until the n8n app manifest
+allows them.
+
+## Login
+
+1. An admin registers one confidential OIDC client on LemonLDAP, `n8n`, with the
+   `openid profile email offline_access` scopes and the n8n redirect URL,
+   `https://<n8n host>/rest/oauth2-credential/callback`.
+2. The credential extends n8n's `oAuth2Api`. The user fills in the URLs, the client ID and the
+   client secret, then clicks **Connect**, which runs the authorization code flow.
+3. n8n stores the access, id and refresh tokens encrypted in its database.
+
+## Exchange for a stack token
+
+cozy-stack refuses the SSO token (`400 Invalid JWT token`). The credential runs
+`exchangeForStackToken` as its `preAuthentication`:
+
+1. Look in a cache keyed by the refresh token, for one hour and per n8n process.
+2. Refresh at the SSO to get a fresh `id_token`.
+3. `POST <instance>/auth/token_exchange` with `{ id_token, exchange_type: 'app' }`.
+4. Use the returned stack token for the request. n8n does not save it, and the node sets
+   `oauth2: { skipTokenRefresh: true }`.
+
+## Lifetimes
+
+| Token                                | Lifetime                      | Source                 |
+| ------------------------------------ | ----------------------------- | ---------------------- |
+| SSO access token, id token           | 10 hours                      | Measured               |
+| SSO refresh token, `offline_access`  | 30 days, survives logout      | Internal documentation |
+| SSO refresh token, no offline access | SSO session, 20 hours at most | Internal documentation |
+| Stack access token                   | 7 days                        | cozy-stack code        |
+| Stack token cached by the node       | 1 hour                        | `stackToken.ts`        |
+
+## Scope of the tokens
+
+On dev, the SSO access token and the id token carry 28 audiences: `n8n` and the other Twake clients,
+including administration clients. The login is therefore not limited to Drive (D13).
+
+The stack token is limited by the n8n app manifest, which is read-only for now.
+
+## Revocation
+
+Measured by revoking a login at the SSO:
+
+| What                                   | Result                                     |
+| -------------------------------------- | ------------------------------------------ |
+| SSO refresh                            | Refused at once (400)                      |
+| Existing stack token and stack refresh | Still accepted after 40 seconds            |
+| Stack client                           | Survives                                   |
+| New exchange with the old `id_token`   | Accepted, as the `id_token` lasts 10 hours |
+
+Other paths:
+
+- Removing the client in **Twake Settings > Connected devices** only lasts until the next exchange,
+  within the hour, which creates a new client.
+- Deleting the credential in n8n does not revoke anything at the SSO.
+
+To end access, revoke the login at the SSO. The node can keep using a cached stack token for up to an
+hour.
+
+## Target against current state
+
+| Criterion                            | State                                                    |
+| ------------------------------------ | -------------------------------------------------------- |
+| Login through the SSO in n8n         | Done                                                     |
+| Permissions limited by app           | Stack token only, the SSO token is not limited (D13)     |
+| Permissions limited inside an app    | Through the n8n app manifest                             |
+| Revocable by the user                | Partly, at the SSO, with no dedicated user interface yet |
+| Revocation chain to exchanged tokens | No (D12)                                                 |
+| Long-lived offline access            | Yes, within the refresh token lifetime                   |
+
+## What n8n allows
+
+- A node can only use credentials its own package declares. The `no-credential-reuse` lint rule has
+  no exceptions, and n8n's scanner ignores `eslint-disable` comments.
+- `extends = ['oAuth2Api']` is allowed. It reuses the OAuth2 form and logic, not a stored login.
+- What `preAuthentication` returns is not saved here, which is why `stackToken.ts` has its own cache.
+
+## Options not in use
+
+| Option                                                  | What it would give                  | Why not now                                             |
+| ------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------- |
+| Per-instance stack OAuth client (`/auth/register`)      | Direct stack login, no SSO client   | Replaced by the exchange (D7)                           |
+| `POST <instance>/oidc/access_token`                     | Trade the SSO token for a stack one | Answers `this endpoint is not enabled` on dev           |
+| One audience per token, or an SSO exchange per audience | Permissions limited by app          | Not validated on the SSO (D13)                          |
+| Dynamic client registration                             | No client secret to copy            | Not documented for custom credentials, needs stack work |
+| n8n credential overwrites                               | Admin prefills client ID and secret | Not needed yet, useful for hosted n8n                   |
+| Device flow                                             | Login without a redirect            | The dev SSO answers `unsupported_grant_type`            |
