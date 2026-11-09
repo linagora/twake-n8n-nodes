@@ -1,7 +1,6 @@
 # Authentication
 
-Current state of authentication in this repository, as of 2026-11-09. Only Twake Drive is implemented
-so far. The choices behind it are in [DECISION.md](DECISION.md).
+Current state of authentication in this repository, as of 2026-11-09. The choices behind it are in [DECISION.md](DECISION.md).
 
 Measurements come from the dev environment on 2026-11-09, with n8n 2.46.6. Client secrets and tokens
 never go in this file.
@@ -11,6 +10,11 @@ never go in this file.
 Twake Drive calls cozy-stack with a stack token obtained from `/auth/token_exchange`. Its credential is
 `twakeDriveOAuth2Api`. Reads are tested on dev, and writes are refused until the n8n app manifest
 allows them.
+
+## Twake Mail
+
+Twake Mail calls the JMAP server directly with the SSO access token (D8), which must carry the
+`james` audience. Its credential is `twakeMailOAuth2Api`. Not tested on dev yet.
 
 ## Login
 
