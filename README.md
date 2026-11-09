@@ -7,6 +7,7 @@
 | [`n8n-nodes-twakedrive`](packages/n8n-nodes-twakedrive) | Twake Drive | Files, folders and share links |
 | [`n8n-nodes-twakesettings`](packages/n8n-nodes-twakesettings) | Twake Settings | Disk usage |
 | [`n8n-nodes-twakecalendar`](packages/n8n-nodes-twakecalendar) | Twake Calendar | List calendars |
+| [`n8n-nodes-twakemail`](packages/n8n-nodes-twakemail) | Twake Mail | JMAP session |
 
 ## Development
 
