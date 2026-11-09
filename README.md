@@ -2,6 +2,10 @@
 
 [n8n](https://n8n.io/) community nodes for the Twake Workplace apps.
 
+| Package | Node | Features |
+| --- | --- | --- |
+| [`n8n-nodes-twakedrive`](packages/n8n-nodes-twakedrive) | Twake Drive | Files, folders and share links |
+
 ## Development
 
 Requires Node.js 24.
