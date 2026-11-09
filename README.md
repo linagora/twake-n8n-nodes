@@ -10,6 +10,7 @@
 | [`n8n-nodes-twakemail`](packages/n8n-nodes-twakemail) | Twake Mail | JMAP session |
 | [`n8n-nodes-twakecontacts`](packages/n8n-nodes-twakecontacts) | Twake Contacts | List address books |
 | [`n8n-nodes-twakechat`](packages/n8n-nodes-twakechat) | Twake Chat | Current account |
+| [`n8n-nodes-twaketasks`](packages/n8n-nodes-twaketasks) | Twake Tasks | List projects |
 
 ## Development
 
