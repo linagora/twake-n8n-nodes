@@ -1,0 +1,51 @@
+# n8n-nodes-twakesettings
+
+n8n community node to read the settings of a [Twake Workplace](https://twake.app/) instance.
+
+## Operations
+
+- **Disk Usage > Get**: bytes `used` by the instance, split between `files` and `versions`, and the
+  `quota` when there is one.
+
+## Usage
+
+Set up the credential and add the node. It outputs one item per input item.
+
+Example workflow: get alerted when the Drive is almost full.
+
+1. **Schedule Trigger**, once a day.
+2. **Twake Settings**, **Disk Usage > Get**.
+3. **If**, comparing `{{ $json.data.attributes.used }}` with `{{ $json.data.attributes.quota }}`.
+4. Any node that sends a message.
+
+## Credentials
+
+The node uses the **Twake Settings OAuth2 API** credential, which logs in through the Twake SSO. For each instance, n8n
+exchanges the login for a stack token at `POST /auth/token_exchange`. The token has the permissions of
+the n8n app manifest, so it covers more than the disk usage, including reading files and contacts.
+
+1. In the SSO, register a confidential OIDC client for n8n, for example `n8n`, with the
+   `openid profile email offline_access` scopes and the **OAuth Redirect URL** of the credential. Id
+   tokens must carry a `sid` claim.
+2. In the stack configuration of the context, map this client to the n8n app:
+
+   ```yaml
+   authentication:
+     my-context:
+       oidc:
+         issuer: https://sign-up.example.com
+         id_token_jwk_url: https://sign-up.example.com/oauth2/jwks
+         allow_app_token_exchange: true
+         app_token_exchange:
+           n8n:
+             software_id: registry://n8n
+             instance_claim: workplaceFqdn
+   ```
+
+   The [n8n app](https://github.com/linagora/n8n-app-wrapper) must be installed from the registry
+   on the instance.
+3. In the credential, fill in your instance URL, the SSO URL, the client ID and secret, and click
+   **Connect**.
+
+To cut access for good, revoke the login at the SSO. Removing the client from **Twake Settings >
+Connected devices** only lasts until the next exchange, within the hour, which creates a new one.
