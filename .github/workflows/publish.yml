@@ -1,0 +1,45 @@
+# Publishes one package of the monorepo to npm with a provenance statement.
+# Push a tag named after the package and its version: n8n-nodes-twakedrive@1.7.0
+# On npmjs.com, each package needs this repository and publish.yml as a trusted publisher.
+name: Publish
+
+# Publishing is disabled for now. To enable it, restore the tag trigger and remove `if: false`.
+on:
+  workflow_dispatch:
+  # push:
+  #   tags:
+  #     - 'n8n-nodes-*@*.*.*'
+
+jobs:
+  publish:
+    if: false
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Publish
+        env:
+          RELEASE_MODE: 'true'
+        run: |
+          package="${GITHUB_REF_NAME%@*}"
+          version="${GITHUB_REF_NAME##*@}"
+          test "$(node -p "require('./packages/$package/package.json').version")" = "$version"
+          npm run lint --workspace "$package"
+          npm run build --workspace "$package"
+          npm publish --workspace "$package" --provenance --access public

@@ -1,0 +1,19 @@
+{
+	"name": "twake-n8n-nodes",
+	"private": true,
+	"workspaces": ["packages/*"],
+	"engines": { "node": ">=24" },
+	"scripts": {
+		"build": "npm run build --workspaces",
+		"lint": "npm run lint --workspaces",
+		"test": "node --test test/*.test.ts",
+		"n8n": "scripts/n8n-dev.sh"
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "^0.55.5",
+		"eslint": "9.39.4",
+		"n8n-workflow": "^2.16.0",
+		"prettier": "3.8.3",
+		"typescript": "5.9.3"
+	}
+}
