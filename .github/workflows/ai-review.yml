@@ -1,0 +1,49 @@
+name: AI review
+
+# Reviews each pull request and posts one comment. Lint, build and tests are
+# owned by the CI workflow. See .github/prompts/code-review.md for the scope.
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+env:
+  GATEWAY_MODEL: deepseek-v4.1-flash
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft && !github.event.pull_request.head.repo.fork }}
+    concurrency:
+      group: ai-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run OpenCode
+        run: |
+          PROMPT=$(cat .github/prompts/code-review.md)
+          export PROMPT
+          npx --yes opencode-ai@1.19.5 github run
+        env:
+          MODEL: linagora/${{ env.GATEWAY_MODEL }}
+          USE_GITHUB_TOKEN: 'true'
+          AI_API_BASE_URL: ${{ secrets.AI_API_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENCODE_CONFIG_CONTENT: >-
+            {
+              "provider": {"linagora": {
+                "npm": "@ai-sdk/openai-compatible",
+                "options": {"baseURL": "{env:AI_API_BASE_URL}", "apiKey": "{env:AI_API_KEY}"},
+                "models": {"${{ env.GATEWAY_MODEL }}": {}}
+              }},
+              "small_model": "linagora/${{ env.GATEWAY_MODEL }}",
+              "permission": {"edit": "deny", "external_directory": "deny", "doom_loop": "deny"}
+            }
