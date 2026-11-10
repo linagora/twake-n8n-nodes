@@ -28,6 +28,9 @@ export function clearStackTokenCache(): void {
 // The stack matches this claim of the id_token with the instance, its instance_claim setting
 const INSTANCE_CLAIM = 'workplaceFqdn';
 
+// The scope of a token the stack issues for the n8n app, whose manifest sets the permissions
+const N8N_APP_SCOPE = '@io.cozy.apps/n8n';
+
 function idTokenClaims(idToken: unknown): IDataObject {
 	const payload = typeof idToken === 'string' ? idToken.split('.')[1] : undefined;
 	if (!payload) {
@@ -103,7 +106,7 @@ export async function exchangeForStackToken(
 	}
 
 	const instanceUrl = instanceUrlOf(credentials, refreshed.id_token);
-	let exchanged: { access_token: string };
+	let exchanged: { access_token?: string; scope?: string };
 	try {
 		exchanged = (await this.helpers.httpRequest({
 			method: 'POST',
@@ -111,11 +114,18 @@ export async function exchangeForStackToken(
 			headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
 			body: { id_token: refreshed.id_token, exchange_type: 'app' },
 			json: true,
-		})) as { access_token: string };
+		})) as { access_token?: string; scope?: string };
 	} catch (error: unknown) {
 		throw refusal(
 			'The instance refused the token exchange. Check the instance URL, that the n8n app is installed on it, and that this SSO client is mapped to that app in app_token_exchange',
 			error,
+		);
+	}
+
+	// The stack picks the app from the id_token, so it can answer with a token for another app
+	if (!exchanged.access_token || exchanged.scope !== N8N_APP_SCOPE) {
+		throw new Error(
+			'The instance did not issue a token for the n8n app. Check the app_token_exchange mapping of this SSO client',
 		);
 	}
 

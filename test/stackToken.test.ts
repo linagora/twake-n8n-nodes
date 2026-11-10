@@ -33,10 +33,12 @@ function makeHelper(responses: unknown[]) {
 	};
 }
 
+const stackToken = { access_token: 'stack', scope: '@io.cozy.apps/n8n' };
+
 beforeEach(clearStackTokenCache);
 
 test('refreshes at the SSO, then exchanges the id_token at the instance', async () => {
-	const { calls, helper } = makeHelper([{ id_token: 'id' }, { access_token: 'stack' }]);
+	const { calls, helper } = makeHelper([{ id_token: 'id' }, stackToken]);
 	const output = await exchangeForStackToken.call(helper as never, credentials);
 
 	assert.deepEqual(output, {
@@ -48,7 +50,7 @@ test('refreshes at the SSO, then exchanges the id_token at the instance', async 
 });
 
 test('reuses the stack token without calling anything', async () => {
-	const { calls, helper } = makeHelper([{ id_token: 'id' }, { access_token: 'stack' }]);
+	const { calls, helper } = makeHelper([{ id_token: 'id' }, stackToken]);
 	await exchangeForStackToken.call(helper as never, credentials);
 	const output = await exchangeForStackToken.call(helper as never, credentials);
 
@@ -86,6 +88,31 @@ test('asks to reconnect when the SSO refuses the refresh', async () => {
 	);
 });
 
+test('refuses a token issued for another app, without caching it', async () => {
+	const { calls, helper } = makeHelper([
+		{ id_token: 'id' },
+		{ access_token: 'mail', scope: '@io.cozy.apps/mail' },
+		{ id_token: 'id' },
+		stackToken,
+	]);
+	await assert.rejects(
+		exchangeForStackToken.call(helper as never, credentials),
+		/did not issue a token for the n8n app/,
+	);
+	const output = await exchangeForStackToken.call(helper as never, credentials);
+
+	assert.equal(calls.length, 4);
+	assert.equal((output.oauthTokenData as { access_token: string }).access_token, 'stack');
+});
+
+test('refuses an exchange that returns no access token', async () => {
+	const { helper } = makeHelper([{ id_token: 'id' }, { scope: '@io.cozy.apps/n8n' }]);
+	await assert.rejects(
+		exchangeForStackToken.call(helper as never, credentials),
+		/did not issue a token for the n8n app/,
+	);
+});
+
 test('the cozy-stack packages ship the same exchange', () => {
 	const read = (name: string) =>
 		readFileSync(`packages/n8n-nodes-${name}/credentials/stackToken.ts`, 'utf8');
@@ -99,7 +126,7 @@ const idToken = (claims: object) =>
 test('exchanges at the instance the SSO gives when no instance URL is filled in', async () => {
 	const { calls, helper } = makeHelper([
 		{ id_token: idToken({ workplaceFqdn: 'bob.test' }) },
-		{ access_token: 'stack' },
+		stackToken,
 	]);
 	await exchangeForStackToken.call(helper as never, { ...credentials, instanceUrl: '' });
 	assert.equal(calls[1].url, 'https://bob.test/auth/token_exchange');
