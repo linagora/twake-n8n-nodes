@@ -15,6 +15,9 @@ user.
   previous ones, and an attendee still invited keeps their answer. For a recurring event, the main
   event changes and its exceptions stay as they are. Outputs like Create.
 - **Event > Delete**: deletes an event, which cancels it for its attendees.
+- **Video Conference > Create**: creates a video conference room owned by the user, and outputs its
+  `url`. The room is not attached to any event, and cannot be deleted from n8n. Requires video
+  conferences (Twake Visio) to be enabled on the calendar side service.
 
 An event is found by its calendar and its `uid`. Dates without a time zone are in the time zone of
 the workflow. Rooms and equipment are booked by their email.

@@ -333,3 +333,21 @@ export async function deleteEvent(
 	await call({ method: 'DELETE', url: eventUrl(calendar, uid) });
 	return { deleted: true, uid };
 }
+
+/**
+ * Creates a Twake Visio room owned by the user, not attached to any event. The service has no
+ * route to delete a room, so a failed call is not retried.
+ */
+export async function createVideoConference(call: Request): Promise<IDataObject> {
+	return (await call({ method: 'POST', url: '/api/videoconference' })) as IDataObject;
+}
+
+/** What a failure of `createVideoConference` means, as both answers have an empty body. */
+export function videoConferenceFailure(error: unknown): string | undefined {
+	const { httpCode, response } = error as { httpCode?: string; response?: { status?: number } };
+	const status = Number(httpCode ?? response?.status);
+	if (status === 404) return 'Video conferences are not enabled on this Twake Calendar deployment';
+	if (status === 502)
+		return 'The video conference service refused the request or cannot be reached';
+	return undefined;
+}

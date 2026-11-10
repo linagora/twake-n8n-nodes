@@ -6,9 +6,11 @@ import type { IHttpRequestOptions } from 'n8n-workflow';
 import {
 	calendarPath,
 	createEvent,
+	createVideoConference,
 	deleteEvent,
 	toUtc,
 	updateEvent,
+	videoConferenceFailure,
 } from '../packages/n8n-nodes-twakecalendar/nodes/TwakeCalendar/events.ts';
 
 const user = { id: 'u1', email: 'alice@test' };
@@ -210,4 +212,16 @@ test('reads local times in the time zone of the workflow, across daylight saving
 test('takes a calendar link or the ID of a calendar of the user', () => {
 	assert.equal(calendarPath('/calendars/u2/c2.json', 'u1'), '/calendars/u2/c2');
 	assert.equal(calendarPath('c1', 'u1'), '/calendars/u1/c1');
+});
+
+test('creates a video conference room and returns its URL', async () => {
+	const { calls, call } = makeCall([{ url: 'https://meet.test/abc-defg-hij' }]);
+	assert.deepEqual(await createVideoConference(call), { url: 'https://meet.test/abc-defg-hij' });
+	assert.deepEqual(calls, [{ method: 'POST', url: '/api/videoconference' }]);
+});
+
+test('explains the empty 404 and 502 answers of the video conference route', () => {
+	assert.match(videoConferenceFailure({ httpCode: '404' }) ?? '', /not enabled/);
+	assert.match(videoConferenceFailure({ response: { status: 502 } }) ?? '', /cannot be reached/);
+	assert.equal(videoConferenceFailure({ httpCode: '500' }), undefined);
 });
