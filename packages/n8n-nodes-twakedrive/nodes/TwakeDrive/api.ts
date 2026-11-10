@@ -5,6 +5,8 @@ import type {
 	ILoadOptionsFunctions,
 } from 'n8n-workflow';
 
+import { instanceUrlOf } from '../../credentials/stackToken';
+
 export { ROOT_DIR_ID } from './tree';
 
 const CREDENTIAL_TYPE = 'twakeDriveOAuth2Api';
@@ -24,8 +26,7 @@ type DirectoryPage = {
 };
 
 export async function getInstanceUrl(this: DriveContext): Promise<string> {
-	const { instanceUrl } = await this.getCredentials<{ instanceUrl: string }>(CREDENTIAL_TYPE);
-	return instanceUrl.replace(/\/+$/, '');
+	return instanceUrlOf(await this.getCredentials(CREDENTIAL_TYPE));
 }
 
 /**

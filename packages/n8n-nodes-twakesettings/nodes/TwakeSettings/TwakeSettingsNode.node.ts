@@ -9,6 +9,8 @@ import {
 	type JsonObject,
 } from 'n8n-workflow';
 
+import { instanceUrlOf } from '../../credentials/stackToken';
+
 const CREDENTIAL_TYPE = 'twakeSettingsOAuth2Api';
 
 export class TwakeSettingsNode implements INodeType {
@@ -54,7 +56,7 @@ export class TwakeSettingsNode implements INodeType {
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const { instanceUrl } = await this.getCredentials<{ instanceUrl: string }>(CREDENTIAL_TYPE);
+		const instanceUrl = instanceUrlOf(await this.getCredentials(CREDENTIAL_TYPE));
 		const out: INodeExecutionData[] = [];
 
 		for (const [itemIndex] of this.getInputData().entries()) {
@@ -64,7 +66,7 @@ export class TwakeSettingsNode implements INodeType {
 					CREDENTIAL_TYPE,
 					{
 						method: 'GET',
-						url: `${instanceUrl.replace(/\/+$/, '')}/settings/disk-usage`,
+						url: `${instanceUrl}/settings/disk-usage`,
 						headers: { Accept: 'application/vnd.api+json' },
 						json: true,
 					},

@@ -25,9 +25,8 @@ export class TwakeDriveOAuth2Api implements ICredentialType {
 			name: 'instanceUrl',
 			type: 'string',
 			default: '',
-			required: true,
 			placeholder: 'e.g. https://alice.twake.app',
-			hint: 'Base URL of your Twake instance',
+			hint: 'Base URL of your Twake instance. Leave empty to use the one the SSO gives you.',
 		},
 		{
 			displayName: 'SSO URL',

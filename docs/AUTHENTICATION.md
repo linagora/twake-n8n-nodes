@@ -54,7 +54,9 @@ cozy-stack refuses the SSO token (`400 Invalid JWT token`). The credential runs
 
 1. Look in a cache keyed by the refresh token, for one hour and per n8n process.
 2. Refresh at the SSO to get a fresh `id_token`.
-3. `POST <instance>/auth/token_exchange` with `{ id_token, exchange_type: 'app' }`.
+3. `POST <instance>/auth/token_exchange` with `{ id_token, exchange_type: 'app' }`. The instance is
+   the URL filled in the credential or, when it is empty, the `workplaceFqdn` claim of that
+   `id_token`. On dev the claim is there with the default scopes.
 4. Use the returned stack token for the request. n8n does not save it, and the node sets
    `oauth2: { skipTokenRefresh: true }`.
 

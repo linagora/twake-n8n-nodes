@@ -2,6 +2,7 @@ import type { ICredentialDataDecryptedObject, IDataObject, IHttpRequestHelper } 
 
 interface SsoTokenData extends IDataObject {
 	refresh_token?: string;
+	id_token?: string;
 }
 
 interface CachedToken {
@@ -22,6 +23,39 @@ function refusal(message: string, cause: unknown): Error {
 
 export function clearStackTokenCache(): void {
 	cache.clear();
+}
+
+// The stack matches this claim of the id_token with the instance, its instance_claim setting
+const INSTANCE_CLAIM = 'workplaceFqdn';
+
+function idTokenClaims(idToken: unknown): IDataObject {
+	const payload = typeof idToken === 'string' ? idToken.split('.')[1] : undefined;
+	if (!payload) {
+		return {};
+	}
+	try {
+		return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as IDataObject;
+	} catch {
+		return {};
+	}
+}
+
+/**
+ * The instance URL filled in the credential, or else the user's instance as the SSO gives it in
+ * an id_token. The token's signature isn't checked here, the stack checks it on each exchange.
+ */
+export function instanceUrlOf(
+	credentials: ICredentialDataDecryptedObject,
+	idToken?: string,
+): string {
+	const filled = String(credentials.instanceUrl ?? '').trim();
+	const tokenData = credentials.oauthTokenData as SsoTokenData | undefined;
+	const claim = idTokenClaims(idToken ?? tokenData?.id_token)[INSTANCE_CLAIM];
+	const url = filled || (typeof claim === 'string' ? claim.trim() : '');
+	if (!url) {
+		throw new Error('The SSO did not give an instance for this login, fill in the instance URL');
+	}
+	return (/^https?:\/\//.test(url) ? url : `https://${url}`).replace(/\/+$/, '');
 }
 
 /**
@@ -68,7 +102,7 @@ export async function exchangeForStackToken(
 		throw new Error('The SSO did not return an id_token when refreshing this credential');
 	}
 
-	const instanceUrl = (credentials.instanceUrl as string).replace(/\/+$/, '');
+	const instanceUrl = instanceUrlOf(credentials, refreshed.id_token);
 	let exchanged: { access_token: string };
 	try {
 		exchanged = (await this.helpers.httpRequest({
