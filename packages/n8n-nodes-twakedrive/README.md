@@ -66,8 +66,9 @@ it allows them.
 
    The [n8n app](https://github.com/linagora/n8n-app-wrapper) must be installed from the registry
    on the instance.
-3. In the credential, fill in your instance URL, the SSO URL, the client ID and secret, and click
-   **Connect**.
+3. In the credential, fill in the SSO URL, the client ID and secret, and click **Connect**. The
+   instance URL is optional: left empty, the node uses the instance the SSO gives in the
+   `workplaceFqdn` claim of the id_token.
 
 To cut access for good, revoke the login at the SSO. Removing the client from **Twake Settings >
 Connected devices** only lasts until the next exchange, within the hour, which creates a new one.

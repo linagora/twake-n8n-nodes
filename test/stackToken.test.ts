@@ -7,6 +7,7 @@ import type { IHttpRequestOptions } from 'n8n-workflow';
 import {
 	clearStackTokenCache,
 	exchangeForStackToken,
+	instanceUrlOf,
 } from '../packages/n8n-nodes-twakedrive/credentials/stackToken.ts';
 
 const credentials = {
@@ -90,4 +91,29 @@ test('the cozy-stack packages ship the same exchange', () => {
 		readFileSync(`packages/n8n-nodes-${name}/credentials/stackToken.ts`, 'utf8');
 	assert.equal(read('twakedrive'), read('twakesettings'));
 	assert.equal(read('twakedrive'), read('twakehome'));
+});
+
+const idToken = (claims: object) =>
+	`header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
+
+test('exchanges at the instance the SSO gives when no instance URL is filled in', async () => {
+	const { calls, helper } = makeHelper([
+		{ id_token: idToken({ workplaceFqdn: 'bob.test' }) },
+		{ access_token: 'stack' },
+	]);
+	await exchangeForStackToken.call(helper as never, { ...credentials, instanceUrl: '' });
+	assert.equal(calls[1].url, 'https://bob.test/auth/token_exchange');
+});
+
+test('reads the instance from the stored id_token, the filled URL winning', () => {
+	const oauthTokenData = { id_token: idToken({ workplaceFqdn: 'https://bob.test/' }) };
+	assert.equal(instanceUrlOf({ instanceUrl: '', oauthTokenData }), 'https://bob.test');
+	assert.equal(
+		instanceUrlOf({ instanceUrl: 'https://alice.test/', oauthTokenData }),
+		'https://alice.test',
+	);
+	assert.throws(
+		() => instanceUrlOf({ instanceUrl: '', oauthTokenData: {} }),
+		/fill in the instance URL/,
+	);
 });
