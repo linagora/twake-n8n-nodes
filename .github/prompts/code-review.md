@@ -20,11 +20,13 @@ already posted. If an issue is already raised there, do not repeat it.
 1. Read `AGENTS.md` at the repository root first: it carries the rules for
    packages, and it is the single place they are maintained. Then read
    `docs/DECISION.md` and `docs/AUTHENTICATION.md`.
-2. Read the full diff (`gh pr diff <number>`), then open the surrounding code
-   of every changed function. Callers outside the diff can break.
+2. Read the full diff in `pr.diff` at the repository root, then open the
+   surrounding code of every changed function. Callers outside the diff can
+   break.
 3. Only report issues you can justify with a concrete failure scenario
    (input or state, then wrong result). No speculative "consider" remarks.
-4. Do not modify files, do not commit, do not push. This is a read-only review.
+4. This is a read-only review: you have no shell and you cannot edit files.
+   Read and search the files of the repository, and fetch URLs.
 
 ## What to check
 
@@ -60,10 +62,10 @@ finding with invented function names and line numbers costs more human time
 than no review at all.
 
 - Never describe the behaviour of n8n, of a Twake API, of a GitHub Action or
-  of any file outside the diff from memory. Open it first: `node_modules/<pkg>`,
-  `gh api repos/<owner>/<repo>/contents/<path>?ref=<commit or tag>` (without
-  `ref` you read the default branch, not the version in use), or the lockfile
-  for the exact version.
+  of any file outside the diff from memory. Open it first, at the version in
+  use: `package-lock.json` gives the exact version of a dependency, and
+  `https://raw.githubusercontent.com/<owner>/<repo>/<tag or commit>/<path>`
+  gives the file. Dependencies are not installed in this job.
 - Quote a symbol name, a line number or a code path only when it comes from
   a file you opened in this run.
 - When you cannot open the source, drop the finding. An unverified claim is
