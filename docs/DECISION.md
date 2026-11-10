@@ -94,3 +94,17 @@ asks for a chain. See [AUTHENTICATION.md](AUTHENTICATION.md#revocation).
 
 On dev the token opens every app the user can reach, administration clients included. D5 and D6 ask for
 limits by app. To settle with the SSO team before production.
+
+## D14. The n8n admin presets the SSO client with credential overwrites (proposed, 2026-11-10)
+
+Users neither register an OIDC client nor copy its secret. The admin of each n8n instance registers one
+`n8n` client on the SSO, with the redirect URL of that instance, and loads its client ID and secret, the
+SSO URL and the fixed service URLs through n8n's credential overwrites. On n8n hosted by Twake, Linagora
+does this for each deployment.
+
+n8n hides those fields and Drive, Settings and Home read the instance from the SSO, so a user only
+clicks **Connect** on each of the seven SSO-based nodes. D10 still means one login per node, and Chat
+stays apart until D11 is settled.
+
+The client cannot ship in the packages: a secret in an npm package is public, and the redirect URL is
+tied to one n8n host. See [AUTHENTICATION.md](AUTHENTICATION.md#preset-sso-client).
