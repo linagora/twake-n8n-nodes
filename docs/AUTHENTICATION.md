@@ -1,6 +1,6 @@
 # Authentication
 
-Current state of authentication in this repository, as of 2026-11-09. The choices behind it are in [DECISION.md](DECISION.md).
+Current state of authentication in this repository, as of 2026-11-10. The choices behind it are in [DECISION.md](DECISION.md).
 
 Measurements come from the dev environment on 2026-11-09, with n8n 2.46.6. Client secrets and tokens
 never go in this file.
@@ -43,9 +43,29 @@ Drive (D7). Its credential is `twakeHomeOAuth2Api`. Not tested on dev yet.
 1. An admin registers one confidential OIDC client on LemonLDAP, `n8n`, with the
    `openid profile email offline_access` scopes and the n8n redirect URL,
    `https://<n8n host>/rest/oauth2-credential/callback`.
-2. The credential extends n8n's `oAuth2Api`. The user fills in the URLs, the client ID and the
-   client secret, then clicks **Connect**, which runs the authorization code flow.
+2. The credential extends n8n's `oAuth2Api`. The user clicks **Connect**, which runs the
+   authorization code flow, after filling in the URLs, the client ID and the client secret unless the
+   admin preset them.
 3. n8n stores the access, id and refresh tokens encrypted in its database.
+
+## Preset SSO client
+
+An n8n admin can preset the client with n8n's
+[credential overwrites](https://docs.n8n.io/administer/manage-credentials/credential-overwrites)
+(D14). n8n hides the overwritten fields, and Drive, Settings and Home read the instance from the SSO,
+so the user only clicks **Connect**.
+
+1. Start n8n with `CREDENTIALS_OVERWRITE_ENDPOINT`, `CREDENTIALS_OVERWRITE_ENDPOINT_AUTH_TOKEN` and
+   `CREDENTIALS_OVERWRITE_PERSISTENCE=true`. Persistence stores the overwrites encrypted in the
+   database, so they survive restarts and reach every worker.
+2. `POST` to that endpoint, with the token, a JSON object with one entry per credential type, such as
+   `twakeDriveOAuth2Api`: `clientId`, `clientSecret` and `ssoUrl`, plus `apiUrl` for Calendar,
+   Contacts, Mail and Tasks. Never an entry for the parent `oAuth2Api`, which would apply to every
+   OAuth2 credential of the instance.
+
+An overwrite only fills empty fields, so existing credentials keep their values. Tested on dev on
+2026-11-10 with n8n 2.46.6: Calendar and Drive connected and ran with only **Connect**. The
+`CREDENTIALS_OVERWRITE_DATA` variable works too, but n8n warns that it can leak to users.
 
 ## Exchange for a stack token
 
@@ -123,5 +143,4 @@ hour.
 | `POST <instance>/oidc/access_token`                     | Trade the SSO token for a stack one | Answers `this endpoint is not enabled` on dev           |
 | One audience per token, or an SSO exchange per audience | Permissions limited by app          | Not validated on the SSO (D13)                          |
 | Dynamic client registration                             | No client secret to copy            | Not documented for custom credentials, needs stack work |
-| n8n credential overwrites                               | Admin prefills client ID and secret | Not needed yet, useful for hosted n8n                   |
 | Device flow                                             | Login without a redirect            | The dev SSO answers `unsupported_grant_type`            |
