@@ -4,34 +4,125 @@ import {
 	NodeOperationError,
 	type IDataObject,
 	type IExecuteFunctions,
-	type IHttpRequestOptions,
+	type ILoadOptionsFunctions,
 	type INodeExecutionData,
+	type INodePropertyOptions,
+	type INodeProperties,
 	type INodeType,
 	type INodeTypeDescription,
 	type JsonObject,
 } from 'n8n-workflow';
 
+import {
+	calendarPath,
+	createEvent,
+	deleteEvent,
+	getUser,
+	listCalendars,
+	updateEvent,
+	type EventFields,
+	type Request,
+	type User,
+} from './events';
+
 const CREDENTIAL_TYPE = 'twakeCalendarOAuth2Api';
 
-interface CalendarUser {
-	id?: string;
-	_id?: string;
+async function caller(context: IExecuteFunctions | ILoadOptionsFunctions): Promise<Request> {
+	const { apiUrl } = await context.getCredentials<{ apiUrl: string }>(CREDENTIAL_TYPE);
+	const baseUrl = apiUrl.replace(/\/+$/, '');
+	return async (options) =>
+		await context.helpers.httpRequestWithAuthentication.call(context, CREDENTIAL_TYPE, {
+			json: true,
+			...options,
+			url: `${baseUrl}${options.url}`,
+		});
 }
 
-interface CalendarList {
-	_embedded?: { 'dav:calendar'?: IDataObject[] };
-}
+const showFor = (operation: string[]) => ({ show: { resource: ['event'], operation } });
 
-async function request<T>(
-	this: IExecuteFunctions,
-	options: Pick<IHttpRequestOptions, 'url' | 'headers' | 'qs'>,
-): Promise<T> {
-	return (await this.helpers.httpRequestWithAuthentication.call(this, CREDENTIAL_TYPE, {
-		method: 'GET',
-		json: true,
-		...options,
-	})) as T;
-}
+const title: INodeProperties = { displayName: 'Title', name: 'title', type: 'string', default: '' };
+const start: INodeProperties = {
+	displayName: 'Start',
+	name: 'start',
+	type: 'dateTime',
+	default: '',
+	hint: 'Without a time zone, the time zone of the workflow applies',
+};
+const end: INodeProperties = {
+	displayName: 'End',
+	name: 'end',
+	type: 'dateTime',
+	default: '',
+	hint: 'For an all-day event, the day after the last day',
+};
+
+const optionalFields: INodeProperties[] = [
+	{
+		displayName: 'Alarms',
+		name: 'alarms',
+		type: 'fixedCollection',
+		placeholder: 'Add Alarm',
+		default: {},
+		typeOptions: { multipleValues: true },
+		description: 'Replace the alarms of the event',
+		options: [
+			{
+				displayName: 'Alarm',
+				name: 'alarm',
+				values: [
+					{
+						displayName: 'Minutes Before',
+						name: 'minutesBefore',
+						type: 'number',
+						typeOptions: { minValue: 0 },
+						default: 15,
+					},
+					{
+						displayName: 'Type',
+						name: 'type',
+						type: 'options',
+						default: 'EMAIL',
+						options: [
+							{ name: 'Email', value: 'EMAIL', description: 'Send an email to the user' },
+							{
+								name: 'Notification',
+								value: 'DISPLAY',
+								description: 'Show a notification in the apps',
+							},
+						],
+					},
+				],
+			},
+		],
+	},
+	{ displayName: 'All Day', name: 'allDay', type: 'boolean', default: false },
+	{
+		displayName: 'Attendees',
+		name: 'attendees',
+		type: 'string',
+		default: '',
+		placeholder: 'e.g. alice@example.com, bob@example.com',
+		description:
+			'Comma-separated emails of the people to invite. Replaces the attendees of the event, and makes the user its organizer.',
+	},
+	{
+		displayName: 'Description',
+		name: 'description',
+		type: 'string',
+		typeOptions: { rows: 4 },
+		default: '',
+	},
+	{ displayName: 'Location', name: 'location', type: 'string', default: '' },
+	{
+		displayName: 'Rooms',
+		name: 'rooms',
+		type: 'string',
+		default: '',
+		placeholder: 'e.g. room-1@example.com',
+		description:
+			'Comma-separated emails of the rooms or equipment to book. Replaces the rooms of the event.',
+	},
+];
 
 export class TwakeCalendarNode implements INodeType {
 	description: INodeTypeDescription = {
@@ -41,7 +132,7 @@ export class TwakeCalendarNode implements INodeType {
 		version: 1,
 		subtitle: '={{ $parameter["operation"] + ": " + $parameter["resource"] }}',
 		icon: { light: 'file:icon.svg', dark: 'file:icon.svg' },
-		description: 'Read the calendars of a Twake user',
+		description: 'Manage the calendars and events of a Twake user',
 		defaults: { name: 'Twake Calendar' },
 		credentials: [{ name: CREDENTIAL_TYPE, required: true }],
 		inputs: [NodeConnectionTypes.Main],
@@ -54,7 +145,10 @@ export class TwakeCalendarNode implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				default: 'calendar',
-				options: [{ name: 'Calendar', value: 'calendar' }],
+				options: [
+					{ name: 'Calendar', value: 'calendar' },
+					{ name: 'Event', value: 'event' },
+				],
 			},
 			{
 				displayName: 'Operation',
@@ -72,43 +166,152 @@ export class TwakeCalendarNode implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				default: 'create',
+				displayOptions: { show: { resource: ['event'] } },
+				options: [
+					{
+						name: 'Create',
+						value: 'create',
+						description: 'Create an event, and invite its attendees and rooms',
+						action: 'Create an event',
+					},
+					{
+						name: 'Delete',
+						value: 'delete',
+						description: 'Delete an event',
+						action: 'Delete an event',
+					},
+					{
+						name: 'Update',
+						value: 'update',
+						description: 'Change the fields of an event',
+						action: 'Update an event',
+					},
+				],
+			},
+			{
+				displayName: 'Calendar Name or ID',
+				name: 'calendar',
+				type: 'options',
+				typeOptions: { loadOptionsMethod: 'getCalendars' },
+				required: true,
+				default: '',
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				displayOptions: showFor(['create', 'update', 'delete']),
+			},
+			{
+				displayName: 'Event ID',
+				name: 'eventId',
+				type: 'string',
+				required: true,
+				default: '',
+				description: 'UID of the event, as in the output of Create',
+				displayOptions: showFor(['update', 'delete']),
+			},
+			{ ...title, required: true, displayOptions: showFor(['create']) },
+			{ ...start, required: true, displayOptions: showFor(['create']) },
+			{ ...end, required: true, displayOptions: showFor(['create']) },
+			{
+				displayName: 'Additional Fields',
+				name: 'additionalFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: showFor(['create']),
+				options: optionalFields,
+			},
+			{
+				displayName: 'Update Fields',
+				name: 'updateFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: showFor(['update']),
+				options: [...optionalFields, end, start, title].sort((a, b) =>
+					a.displayName.localeCompare(b.displayName),
+				),
+			},
 		],
 	};
 
+	methods = {
+		loadOptions: {
+			async getCalendars(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const call = await caller(this);
+				const user = await getUser(call);
+				return (await listCalendars(call, user.id)).flatMap((calendar) => {
+					const href = (calendar._links as { self?: { href?: string } } | undefined)?.self?.href;
+					if (!href) return [];
+					const value = href.replace(/\.json$/, '');
+					// The service names the main calendar of a user `#default`.
+					const name =
+						calendar['dav:name'] === '#default' ? 'Default Calendar' : calendar['dav:name'];
+					return [{ name: String(name || value), value }];
+				});
+			},
+		},
+	};
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const { apiUrl } = await this.getCredentials<{ apiUrl: string }>(CREDENTIAL_TYPE);
-		const baseUrl = apiUrl.replace(/\/+$/, '');
+		const call = await caller(this);
+		const timeZone = this.getTimezone();
 		const out: INodeExecutionData[] = [];
+		let user: User | undefined;
 
 		for (const [itemIndex] of this.getInputData().entries()) {
+			const pairedItem = { item: itemIndex };
 			try {
-				const user = await (request<CalendarUser>).call(this, { url: `${baseUrl}/api/user` });
-				const userId = user.id ?? user._id;
-				if (!userId) {
-					throw new NodeOperationError(
-						this.getNode(),
-						'The calendar service did not return a user ID',
-						{ itemIndex },
+				const param = (name: string) => this.getNodeParameter(name, itemIndex);
+				user ??= await getUser(call);
+				const resource = param('resource') as string;
+				const operation = param('operation') as string;
+
+				if (resource === 'calendar') {
+					for (const json of await listCalendars(call, user.id)) out.push({ json, pairedItem });
+					continue;
+				}
+
+				const calendar = calendarPath(param('calendar') as string, user.id);
+				let json: IDataObject;
+				if (operation === 'create') {
+					const fields: EventFields = {
+						...(param('additionalFields') as EventFields),
+						title: param('title') as string,
+						start: String(param('start')),
+						end: String(param('end')),
+					};
+					json = await createEvent(call, user, calendar, fields, timeZone);
+				} else if (operation === 'update') {
+					const fields = { ...(param('updateFields') as EventFields) };
+					// An expression can give a DateTime object.
+					if (fields.start) fields.start = String(fields.start);
+					if (fields.end) fields.end = String(fields.end);
+					json = await updateEvent(
+						call,
+						user,
+						calendar,
+						param('eventId') as string,
+						fields,
+						timeZone,
 					);
+				} else {
+					json = await deleteEvent(call, calendar, param('eventId') as string);
 				}
-				const list = await (request<CalendarList>).call(this, {
-					url: `${baseUrl}/dav/calendars/${encodeURIComponent(userId)}.json`,
-					headers: { Accept: 'application/calendar+json' },
-					qs: {
-						personal: true,
-						sharedDelegationStatus: 'accepted',
-						sharedPublicSubscription: true,
-						withRights: true,
-					},
-				});
-				for (const json of list._embedded?.['dav:calendar'] ?? []) {
-					out.push({ json, pairedItem: { item: itemIndex } });
-				}
+				out.push({ json, pairedItem });
 			} catch (error) {
-				if (!this.continueOnFail()) {
-					throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex });
+				if (this.continueOnFail()) {
+					out.push({ json: { error: (error as Error).message }, pairedItem });
+					continue;
 				}
-				out.push({ json: { error: (error as Error).message }, pairedItem: { item: itemIndex } });
+				throw error instanceof NodeOperationError
+					? error
+					: new NodeApiError(this.getNode(), error as JsonObject, { itemIndex });
 			}
 		}
 
