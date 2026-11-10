@@ -16,10 +16,12 @@ import {
 import {
 	calendarPath,
 	createEvent,
+	createVideoConference,
 	deleteEvent,
 	getUser,
 	listCalendars,
 	updateEvent,
+	videoConferenceFailure,
 	type EventFields,
 	type Request,
 	type User,
@@ -132,7 +134,7 @@ export class TwakeCalendarNode implements INodeType {
 		version: 1,
 		subtitle: '={{ $parameter["operation"] + ": " + $parameter["resource"] }}',
 		icon: { light: 'file:icon.svg', dark: 'file:icon.svg' },
-		description: 'Manage the calendars and events of a Twake user',
+		description: 'Manage the calendars, events and video conferences of a Twake user',
 		defaults: { name: 'Twake Calendar' },
 		credentials: [{ name: CREDENTIAL_TYPE, required: true }],
 		inputs: [NodeConnectionTypes.Main],
@@ -148,6 +150,7 @@ export class TwakeCalendarNode implements INodeType {
 				options: [
 					{ name: 'Calendar', value: 'calendar' },
 					{ name: 'Event', value: 'event' },
+					{ name: 'Video Conference', value: 'videoConference' },
 				],
 			},
 			{
@@ -191,6 +194,22 @@ export class TwakeCalendarNode implements INodeType {
 						value: 'update',
 						description: 'Change the fields of an event',
 						action: 'Update an event',
+					},
+				],
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				default: 'create',
+				displayOptions: { show: { resource: ['videoConference'] } },
+				options: [
+					{
+						name: 'Create',
+						value: 'create',
+						description: 'Create a video conference room, not attached to any event',
+						action: 'Create a video conference',
 					},
 				],
 			},
@@ -268,10 +287,23 @@ export class TwakeCalendarNode implements INodeType {
 			const pairedItem = { item: itemIndex };
 			try {
 				const param = (name: string) => this.getNodeParameter(name, itemIndex);
-				user ??= await getUser(call);
 				const resource = param('resource') as string;
 				const operation = param('operation') as string;
 
+				if (resource === 'videoConference') {
+					let json: IDataObject;
+					try {
+						json = await createVideoConference(call);
+					} catch (error) {
+						const message = videoConferenceFailure(error);
+						throw message
+							? new NodeOperationError(this.getNode(), message, { itemIndex })
+							: new NodeApiError(this.getNode(), error as JsonObject, { itemIndex });
+					}
+					out.push({ json, pairedItem });
+					continue;
+				}
+				user ??= await getUser(call);
 				if (resource === 'calendar') {
 					for (const json of await listCalendars(call, user.id)) out.push({ json, pairedItem });
 					continue;
