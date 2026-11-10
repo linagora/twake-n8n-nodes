@@ -1,11 +1,23 @@
 # n8n-nodes-twakecalendar
 
-n8n community node to read the calendars of a [Twake Workplace](https://twake.app/) user.
+n8n community node to manage the calendars and events of a [Twake Workplace](https://twake.app/)
+user.
 
 ## Operations
 
 - **Calendar > Get Many**: one item per calendar of the connected user: personal, delegated and
   subscribed. Fields are the raw answer of the service.
+- **Event > Create**: creates an event in a calendar, with its title, start and end, and optionally
+  a description, a location, attendees, rooms and alarms. With attendees or rooms, the user becomes
+  the organizer and the calendar service sends the invitations. Outputs the `uid` of the event and
+  the event as stored, in jCal.
+- **Event > Update**: changes the fields that are set. Attendees, rooms and alarms replace the
+  previous ones, and an attendee still invited keeps their answer. For a recurring event, the main
+  event changes and its exceptions stay as they are. Outputs like Create.
+- **Event > Delete**: deletes an event, which cancels it for its attendees.
+
+An event is found by its calendar and its `uid`. Dates without a time zone are in the time zone of
+the workflow. Rooms and equipment are booked by their email.
 
 ## Usage
 
