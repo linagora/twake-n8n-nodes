@@ -4,6 +4,12 @@ n8n community node to read the mail account of a [Twake Workplace](https://twake
 
 ## Operations
 
+- **Email > Search**: emails, newest first, without their bodies. Filters: mailbox, sender, recipient,
+  subject, text, dates, keywords such as `$seen`, and attachments. Several filters must all match.
+- **Email > Get**: an email with its text and HTML bodies.
+- **Email > Get Attachments**: the attachments of an email, and with **Download** their files as
+  binaries `attachment_0`, `attachment_1`…
+- **Thread > Get**: the emails of a thread, from the `threadId` of any of them.
 - **Session > Get**: the JMAP session of the connected user: account IDs, capabilities and API URLs.
 
 ## Usage
