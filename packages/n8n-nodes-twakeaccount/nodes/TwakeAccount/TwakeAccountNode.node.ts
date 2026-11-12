@@ -11,18 +11,18 @@ import {
 
 import { instanceUrlOf } from '../../credentials/stackToken';
 
-const CREDENTIAL_TYPE = 'twakeHomeOAuth2Api';
+const CREDENTIAL_TYPE = 'twakeAccountOAuth2Api';
 
-export class TwakeHomeNode implements INodeType {
+export class TwakeAccountNode implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Twake Home',
-		name: 'twakeHomeNode',
+		displayName: 'Twake Account',
+		name: 'twakeAccountNode',
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{ $parameter["operation"] + ": " + $parameter["resource"] }}',
 		icon: { light: 'file:icon.svg', dark: 'file:icon.svg' },
-		description: 'Read the apps of a Twake instance',
-		defaults: { name: 'Twake Home' },
+		description: 'Read the apps and the disk usage of a Twake instance',
+		defaults: { name: 'Twake Account' },
 		credentials: [{ name: CREDENTIAL_TYPE, required: true }],
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
@@ -34,7 +34,10 @@ export class TwakeHomeNode implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				default: 'app',
-				options: [{ name: 'App', value: 'app' }],
+				options: [
+					{ name: 'App', value: 'app' },
+					{ name: 'Disk Usage', value: 'diskUsage' },
+				],
 			},
 			{
 				displayName: 'Operation',
@@ -52,22 +55,38 @@ export class TwakeHomeNode implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				default: 'get',
+				displayOptions: { show: { resource: ['diskUsage'] } },
+				options: [
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get the bytes used and the quota of the instance',
+						action: 'Get disk usage',
+					},
+				],
+			},
 		],
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const baseUrl = instanceUrlOf(await this.getCredentials(CREDENTIAL_TYPE));
+		const instanceUrl = instanceUrlOf(await this.getCredentials(CREDENTIAL_TYPE));
 		const out: INodeExecutionData[] = [];
 
 		for (const [itemIndex] of this.getInputData().entries()) {
 			try {
-				// The first page holds 100 apps, more than an instance has
-				const { data } = (await this.helpers.httpRequestWithAuthentication.call(
+				const isApp = this.getNodeParameter('resource', itemIndex) === 'app';
+				const response = (await this.helpers.httpRequestWithAuthentication.call(
 					this,
 					CREDENTIAL_TYPE,
 					{
 						method: 'GET',
-						url: `${baseUrl}/apps/`,
+						url: `${instanceUrl}${isApp ? '/apps/' : '/settings/disk-usage'}`,
 						headers: { Accept: 'application/vnd.api+json' },
 						json: true,
 					},
@@ -77,8 +96,10 @@ export class TwakeHomeNode implements INodeType {
 							skipTokenRefresh: true,
 						},
 					},
-				)) as { data?: IDataObject[] };
-				for (const json of data ?? []) {
+				)) as IDataObject;
+				// One item per app: the first page holds 100 apps, more than an instance has
+				const items = isApp ? ((response.data as IDataObject[] | undefined) ?? []) : [response];
+				for (const json of items) {
 					out.push({ json, pairedItem: { item: itemIndex } });
 				}
 			} catch (error) {

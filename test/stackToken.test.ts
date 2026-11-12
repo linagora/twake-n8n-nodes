@@ -116,8 +116,7 @@ test('refuses an exchange that returns no access token', async () => {
 test('the cozy-stack packages ship the same exchange', () => {
 	const read = (name: string) =>
 		readFileSync(`packages/n8n-nodes-${name}/credentials/stackToken.ts`, 'utf8');
-	assert.equal(read('twakedrive'), read('twakesettings'));
-	assert.equal(read('twakedrive'), read('twakehome'));
+	assert.equal(read('twakedrive'), read('twakeaccount'));
 });
 
 const idToken = (claims: object) =>
