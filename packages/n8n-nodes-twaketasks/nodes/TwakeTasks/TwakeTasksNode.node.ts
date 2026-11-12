@@ -17,7 +17,6 @@ import { taskProperties } from './taskProperties';
 import {
 	addComment,
 	addReminder,
-	apiErrorCode,
 	completeTask,
 	createTask,
 	getBoard,
@@ -27,6 +26,7 @@ import {
 	setAssignees,
 	setLabels,
 	simpleAction,
+	refusalMessage,
 	simpleActions,
 	transferTask,
 	updateTask,
@@ -72,11 +72,11 @@ function nodeError(node: INode, error: unknown, itemIndex: number) {
 	if (!(error as { httpCode?: string }).httpCode) {
 		return new NodeOperationError(node, error as Error, { itemIndex });
 	}
-	const code = apiErrorCode(error);
-	return new NodeApiError(node, error as JsonObject, {
-		itemIndex,
-		...(code ? { message: `Twake Tasks refused the request: ${code}` } : {}),
-	});
+	// Wrapping an error n8n already wrapped hands it back as is, options ignored.
+	const failure = new NodeApiError(node, error as JsonObject, { itemIndex });
+	failure.context.itemIndex = itemIndex;
+	failure.message = refusalMessage(error) ?? failure.message;
+	return failure;
 }
 
 export class TwakeTasksNode implements INodeType {

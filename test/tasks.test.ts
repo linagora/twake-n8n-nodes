@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { createRequire } from 'node:module';
+
 import type { IHttpRequestOptions } from 'n8n-workflow';
 
 import {
 	addComment,
 	addReminder,
-	apiErrorCode,
 	completeTask,
 	createTask,
 	moveTask,
+	refusalMessage,
 	removeReminder,
 	setAssignees,
 	setLabels,
@@ -62,6 +64,8 @@ test('updates with nested fields and clears others', async () => {
 		title: 'New',
 		duration: { value: { amount: 30, unit: 'minutes' } },
 		recurrence: { value: { every: 1, unit: 'weeks', fromCompletion: false } },
+		dueDate: '',
+		dueTime: '',
 		clear: ['deadline', 'priority'],
 	});
 	assert.deepEqual(output, { success: true, taskId: 't1' });
@@ -111,7 +115,7 @@ test('completes a task without section through complete', async () => {
 test('completes a task in a section by moving it, and fails without such a section', async () => {
 	const { calls, call } = makeCall([board('s1'), undefined, board('s2')]);
 	const output = await completeTask(call, 'b1', 't1', 'completed');
-	assert.deepEqual(output, { success: true, taskId: 't1', sectionId: 's2' });
+	assert.deepEqual(output, { success: true, taskId: 't1' });
 	assert.deepEqual(sent(calls)[1], ['POST', `${task}/move`, { sectionId: 's2' }]);
 	await assert.rejects(completeTask(call, 'b1', 't1', 'canceled'), /no canceled section/);
 });
@@ -149,14 +153,33 @@ test('comments, transfers and adds reminders', async () => {
 	]);
 });
 
+// The ESM build of n8n-workflow does not load in node:test, n8n itself loads the CommonJS one.
+const { NodeApiError } = createRequire(import.meta.url)('n8n-workflow');
+
+test('finds the code of the backend in an error n8n wrapped', () => {
+	const node = {
+		id: '1',
+		name: 'Tasks',
+		type: 't',
+		typeVersion: 1,
+		position: [0, 0],
+		parameters: {},
+	};
+	const axiosLike = Object.assign(new Error('Request failed with status code 409'), {
+		isAxiosError: true,
+		response: { status: 409, data: { error: 'stale_neighbours' } },
+	});
+	assert.equal(
+		refusalMessage(new NodeApiError(node, axiosLike)),
+		'Twake Tasks refused the request: stale_neighbours',
+	);
+	assert.equal(refusalMessage(new Error('socket hang up')), undefined);
+});
+
 test('reads the code of an API error, as an object or as text', () => {
 	assert.equal(
-		apiErrorCode({ context: { data: { error: 'stale_neighbours' } } }),
-		'stale_neighbours',
+		refusalMessage({ cause: { response: { data: '{"error":"invalid_section"}' } } }),
+		'Twake Tasks refused the request: invalid_section',
 	);
-	assert.equal(
-		apiErrorCode({ cause: { response: { data: '{"error":"invalid_section"}' } } }),
-		'invalid_section',
-	);
-	assert.equal(apiErrorCode({ context: { data: 'Bad Gateway' } }), undefined);
+	assert.equal(refusalMessage({ context: { data: 'Bad Gateway' } }), undefined);
 });
