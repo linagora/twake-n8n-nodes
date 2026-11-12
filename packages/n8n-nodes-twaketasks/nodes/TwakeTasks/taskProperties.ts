@@ -1,0 +1,456 @@
+import type { INodeProperties } from 'n8n-workflow';
+
+const showFor = (operation: string[]) => ({ show: { resource: ['task'], operation } });
+
+const section = (name: string, loadOptionsMethod: string, dependsOn: string): INodeProperties => ({
+	displayName: 'Section Name or ID',
+	name,
+	type: 'options',
+	typeOptions: { loadOptionsMethod, loadOptionsDependsOn: [dependsOn] },
+	default: '',
+	description:
+		'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+});
+
+const sorted = (fields: INodeProperties[]) =>
+	fields.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+const taskFields: INodeProperties[] = [
+	{
+		displayName: 'Deadline',
+		name: 'deadline',
+		type: 'dateTime',
+		default: '',
+		description: 'Only the day is kept',
+	},
+	{
+		displayName: 'Description',
+		name: 'description',
+		type: 'string',
+		typeOptions: { rows: 4 },
+		default: '',
+		description: 'In Markdown. Replaces the description of the task.',
+	},
+	{
+		displayName: 'Due Date',
+		name: 'dueDate',
+		type: 'dateTime',
+		default: '',
+		description: 'Only the day is kept',
+	},
+	{
+		displayName: 'Due Time',
+		name: 'dueTime',
+		type: 'string',
+		default: '',
+		placeholder: 'e.g. 14:30',
+		description: 'Needs a due date',
+	},
+	{
+		displayName: 'Due Time Zone',
+		name: 'dueZone',
+		type: 'string',
+		default: '',
+		placeholder: 'e.g. Europe/Paris',
+		description: 'IANA time zone of the due time',
+	},
+	{
+		displayName: 'Duration',
+		name: 'duration',
+		type: 'fixedCollection',
+		default: {},
+		options: [
+			{
+				displayName: 'Duration',
+				name: 'value',
+				values: [
+					{
+						displayName: 'Amount',
+						name: 'amount',
+						type: 'number',
+						typeOptions: { minValue: 1 },
+						default: 1,
+					},
+					{
+						displayName: 'Unit',
+						name: 'unit',
+						type: 'options',
+						default: 'minutes',
+						options: [
+							{ name: 'Minutes', value: 'minutes' },
+							{ name: 'Days', value: 'days' },
+						],
+					},
+				],
+			},
+		],
+	},
+	{
+		displayName: 'Priority',
+		name: 'priority',
+		type: 'options',
+		default: 1,
+		options: [1, 2, 3, 4].map((level) => ({ name: `P${level}`, value: level })),
+	},
+	{
+		displayName: 'Recurrence',
+		name: 'recurrence',
+		type: 'fixedCollection',
+		default: {},
+		options: [
+			{
+				displayName: 'Recurrence',
+				name: 'value',
+				values: [
+					{
+						displayName: 'Every',
+						name: 'every',
+						type: 'number',
+						typeOptions: { minValue: 1 },
+						default: 1,
+					},
+					{
+						displayName: 'From Completion',
+						name: 'fromCompletion',
+						type: 'boolean',
+						default: false,
+						description: 'Whether the next date counts from the day the task is completed',
+					},
+					{
+						displayName: 'Unit',
+						name: 'unit',
+						type: 'options',
+						default: 'weeks',
+						options: [
+							{ name: 'Days', value: 'days' },
+							{ name: 'Weeks', value: 'weeks' },
+							{ name: 'Months', value: 'months' },
+							{ name: 'Years', value: 'years' },
+						],
+					},
+				],
+			},
+		],
+	},
+];
+
+const withTaskId = [
+	'addReminder',
+	'archive',
+	'assign',
+	'comment',
+	'complete',
+	'follow',
+	'move',
+	'removeReminder',
+	'restore',
+	'setLabels',
+	'transfer',
+	'unfollow',
+	'update',
+];
+
+export const taskProperties: INodeProperties[] = [
+	{
+		displayName: 'Operation',
+		name: 'operation',
+		type: 'options',
+		noDataExpression: true,
+		default: 'create',
+		displayOptions: { show: { resource: ['task'] } },
+		options: [
+			{
+				name: 'Add Reminder',
+				value: 'addReminder',
+				description: 'Remind the connected user of a task',
+				action: 'Add a reminder to a task',
+			},
+			{
+				name: 'Archive',
+				value: 'archive',
+				description: 'Archive a task',
+				action: 'Archive a task',
+			},
+			{
+				name: 'Assign',
+				value: 'assign',
+				description: 'Replace the assignees of a task',
+				action: 'Assign a task',
+			},
+			{
+				name: 'Comment',
+				value: 'comment',
+				description: 'Add a comment to a task',
+				action: 'Comment on a task',
+			},
+			{
+				name: 'Complete',
+				value: 'complete',
+				description: 'Complete, cancel or reopen a task',
+				action: 'Complete a task',
+			},
+			{
+				name: 'Create',
+				value: 'create',
+				description: 'Create a task or a subtask',
+				action: 'Create a task',
+			},
+			{
+				name: 'Follow',
+				value: 'follow',
+				description: 'Get notified of the changes of a task',
+				action: 'Follow a task',
+			},
+			{
+				name: 'Move',
+				value: 'move',
+				description: 'Move a task to a section of its board',
+				action: 'Move a task',
+			},
+			{
+				name: 'Remove Reminder',
+				value: 'removeReminder',
+				description: 'Remove a reminder of the connected user',
+				action: 'Remove a reminder from a task',
+			},
+			{
+				name: 'Restore',
+				value: 'restore',
+				description: 'Bring back an archived or deleted task',
+				action: 'Restore a task',
+			},
+			{
+				name: 'Set Labels',
+				value: 'setLabels',
+				description: 'Replace the labels of a task',
+				action: 'Set the labels of a task',
+			},
+			{
+				name: 'Transfer',
+				value: 'transfer',
+				description: 'Move a task to another board',
+				action: 'Transfer a task',
+			},
+			{
+				name: 'Unfollow',
+				value: 'unfollow',
+				description: 'Stop being notified of the changes of a task',
+				action: 'Unfollow a task',
+			},
+			{
+				name: 'Update',
+				value: 'update',
+				description: 'Change the fields of a task',
+				action: 'Update a task',
+			},
+		],
+	},
+	{
+		displayName: 'Board Name or ID',
+		name: 'boardId',
+		type: 'options',
+		typeOptions: { loadOptionsMethod: 'getBoards' },
+		required: true,
+		default: '',
+		description:
+			'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		displayOptions: { show: { resource: ['task'] } },
+	},
+	{
+		displayName: 'Task ID',
+		name: 'taskId',
+		type: 'string',
+		required: true,
+		default: '',
+		description: 'ID of the task, as in the output of Create',
+		displayOptions: showFor(withTaskId),
+	},
+	{
+		displayName: 'Title',
+		name: 'title',
+		type: 'string',
+		required: true,
+		default: '',
+		displayOptions: showFor(['create']),
+	},
+	{
+		...section('sectionId', 'getSections', 'boardId'),
+		displayOptions: showFor(['create', 'move']),
+	},
+	{
+		displayName: 'Additional Fields',
+		name: 'additionalFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {},
+		displayOptions: showFor(['create']),
+		options: sorted([
+			...taskFields,
+			{
+				displayName: 'Parent Task ID',
+				name: 'parentId',
+				type: 'string',
+				default: '',
+				description: 'Create a subtask of this task. The section is then the one of the parent.',
+			},
+		]),
+	},
+	{
+		displayName: 'Update Fields',
+		name: 'updateFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {},
+		displayOptions: showFor(['update']),
+		options: sorted([
+			...taskFields,
+			{
+				displayName: 'Clear Fields',
+				name: 'clear',
+				type: 'multiOptions',
+				default: [],
+				description: 'Fields to empty',
+				options: [
+					{ name: 'Deadline', value: 'deadline' },
+					{ name: 'Due Date', value: 'dueDate' },
+					{ name: 'Due Time', value: 'dueTime' },
+					{ name: 'Due Time Zone', value: 'dueZone' },
+					{ name: 'Duration', value: 'duration' },
+					{ name: 'Priority', value: 'priority' },
+					{ name: 'Recurrence', value: 'recurrence' },
+				],
+			},
+			{ displayName: 'Title', name: 'title', type: 'string', default: '' },
+		]),
+	},
+	{
+		displayName: 'Assignee Names or IDs',
+		name: 'userIds',
+		type: 'multiOptions',
+		typeOptions: { loadOptionsMethod: 'getMembers', loadOptionsDependsOn: ['boardId'] },
+		default: [],
+		description:
+			'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		hint: 'Replaces the assignees, none to unassign everyone',
+		displayOptions: showFor(['assign']),
+	},
+	{
+		displayName: 'Label Names or IDs',
+		name: 'labelIds',
+		type: 'multiOptions',
+		typeOptions: { loadOptionsMethod: 'getLabels', loadOptionsDependsOn: ['boardId'] },
+		default: [],
+		description:
+			'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		hint: 'Replaces the labels, none to remove them all',
+		displayOptions: showFor(['setLabels']),
+	},
+	{
+		displayName: 'Options',
+		name: 'moveOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: showFor(['move']),
+		options: [
+			{
+				displayName: 'After Task ID',
+				name: 'afterId',
+				type: 'string',
+				default: '',
+				description: 'Place the task after this one. Without it, the task goes last.',
+			},
+			{
+				displayName: 'Before Task ID',
+				name: 'beforeId',
+				type: 'string',
+				default: '',
+				description: 'Place the task before this one',
+			},
+		],
+	},
+	{
+		displayName: 'State',
+		name: 'state',
+		type: 'options',
+		default: 'completed',
+		description:
+			'A task in a section moves to the first section of the board of that kind, a task without one changes state',
+		options: [
+			{ name: 'Canceled', value: 'canceled' },
+			{ name: 'Completed', value: 'completed' },
+			{ name: 'Reopened', value: 'open' },
+		],
+		displayOptions: showFor(['complete']),
+	},
+	{
+		displayName: 'Comment',
+		name: 'body',
+		type: 'string',
+		typeOptions: { rows: 4 },
+		required: true,
+		default: '',
+		description: 'In Markdown. A mention notifies that person.',
+		displayOptions: showFor(['comment']),
+	},
+	{
+		displayName: 'Target Board Name or ID',
+		name: 'targetBoardId',
+		type: 'options',
+		typeOptions: { loadOptionsMethod: 'getBoards' },
+		required: true,
+		default: '',
+		description:
+			'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		hint: 'Assignees who are not members of it are dropped',
+		displayOptions: showFor(['transfer']),
+	},
+	{
+		...section('targetSectionId', 'getTargetSections', 'targetBoardId'),
+		displayName: 'Target Section Name or ID',
+		displayOptions: showFor(['transfer']),
+	},
+	{
+		displayName: 'Remind',
+		name: 'remind',
+		type: 'options',
+		default: 'at',
+		options: [
+			{ name: 'At a Date', value: 'at' },
+			{
+				name: 'Before the Due Date',
+				value: 'beforeDue',
+				description: 'Follows the due date when it changes. Needs a due date.',
+			},
+		],
+		displayOptions: showFor(['addReminder']),
+	},
+	{
+		displayName: 'Date',
+		name: 'at',
+		type: 'dateTime',
+		required: true,
+		default: '',
+		hint: 'Without a time zone, the time zone of the workflow applies',
+		displayOptions: { show: { resource: ['task'], operation: ['addReminder'], remind: ['at'] } },
+	},
+	{
+		displayName: 'Minutes Before',
+		name: 'beforeMinutes',
+		type: 'number',
+		typeOptions: { minValue: 0 },
+		default: 60,
+		displayOptions: {
+			show: { resource: ['task'], operation: ['addReminder'], remind: ['beforeDue'] },
+		},
+	},
+	{
+		displayName: 'Reminder ID',
+		name: 'reminderId',
+		type: 'string',
+		required: true,
+		default: '',
+		description: 'ID of the reminder, as in the output of Add Reminder',
+		displayOptions: showFor(['removeReminder']),
+	},
+];
