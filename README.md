@@ -7,7 +7,7 @@
 | [`n8n-nodes-twakedrive`](packages/n8n-nodes-twakedrive) | Twake Drive | Files, folders and share links |
 | [`n8n-nodes-twakesettings`](packages/n8n-nodes-twakesettings) | Twake Settings | Disk usage |
 | [`n8n-nodes-twakecalendar`](packages/n8n-nodes-twakecalendar) | Twake Calendar | List calendars |
-| [`n8n-nodes-twakemail`](packages/n8n-nodes-twakemail) | Twake Mail | JMAP session |
+| [`n8n-nodes-twakemail`](packages/n8n-nodes-twakemail) | Twake Mail | Search and read emails, threads and attachments |
 | [`n8n-nodes-twakecontacts`](packages/n8n-nodes-twakecontacts) | Twake Contacts | List address books |
 | [`n8n-nodes-twakechat`](packages/n8n-nodes-twakechat) | Twake Chat | Current account |
 | [`n8n-nodes-twaketasks`](packages/n8n-nodes-twaketasks) | Twake Tasks | List projects |

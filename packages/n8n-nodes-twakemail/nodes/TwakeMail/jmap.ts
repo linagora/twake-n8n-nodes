@@ -115,6 +115,12 @@ export async function jmap(
 
 const list = (result: IDataObject | undefined) => (result?.list ?? []) as IDataObject[];
 
+/** The objects of a /get in the order of `ids`, as a /get may answer in any order. */
+function inOrder(ids: string[], objects: IDataObject[]): IDataObject[] {
+	const byId = new Map(objects.map((object): [unknown, IDataObject] => [object.id, object]));
+	return ids.map((id) => byId.get(id)).filter((object) => object !== undefined);
+}
+
 function requireFound(result: IDataObject, what: string, id: string) {
 	if ((result.notFound as string[] | undefined)?.length)
 		throw new Error(`No ${what} with the ID ${id}`);
@@ -146,6 +152,7 @@ export async function searchEmails(
 	limit = Infinity,
 ): Promise<IDataObject[]> {
 	const emails: IDataObject[] = [];
+	let position = 0;
 	// James has no `anchor`: pages until one is short.
 	while (emails.length < limit) {
 		const size = Math.min(PAGE, limit - emails.length);
@@ -157,7 +164,7 @@ export async function searchEmails(
 					accountId,
 					filter,
 					sort: [{ property: 'receivedAt', isAscending: false }],
-					position: emails.length,
+					position,
 					limit: size,
 				},
 				'q',
@@ -172,9 +179,10 @@ export async function searchEmails(
 				'g',
 			],
 		]);
-		const page = list(results.g);
-		emails.push(...page);
-		if (((results.q?.ids as unknown[] | undefined)?.length ?? 0) < size) break;
+		const ids = (results.q?.ids ?? []) as string[];
+		emails.push(...inOrder(ids, list(results.g)));
+		position += ids.length;
+		if (ids.length < size) break;
 	}
 	return emails;
 }
@@ -218,7 +226,7 @@ export async function getThread(
 		],
 	]);
 	requireFound(t, 'thread', threadId);
-	return list(g);
+	return inOrder((list(t)[0]?.emailIds ?? []) as string[], list(g));
 }
 
 export async function getAttachments(call: Request, account: Account, emailId: string) {

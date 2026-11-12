@@ -14,7 +14,8 @@ n8n community node to read the mail account of a [Twake Workplace](https://twake
 
 ## Usage
 
-Set up the credential and add the node. It outputs one item per input item.
+Set up the credential and add the node. Search and Thread > Get output one item per email, the
+other operations one item per input item.
 
 Example workflow:
 
