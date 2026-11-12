@@ -48,6 +48,30 @@ export async function listBoards(call: Request): Promise<IDataObject[]> {
 	return boards ?? [];
 }
 
+export async function listFilters(call: Request): Promise<IDataObject[]> {
+	const { filters } = (await call({ method: 'GET', url: '/api/filters' })) as {
+		filters?: IDataObject[];
+	};
+	return filters ?? [];
+}
+
+async function listTasks(call: Request, url: string, qs?: IDataObject): Promise<IDataObject[]> {
+	const { tasks } = (await call(qs ? { method: 'GET', url, qs } : { method: 'GET', url })) as {
+		tasks?: IDataObject[];
+	};
+	return tasks ?? [];
+}
+
+/** The open tasks assigned to the user, on every board. */
+export const getMyTasks = async (call: Request) => await listTasks(call, '/api/my-tasks');
+
+/** The open tasks due before today plus `days` in `timeZone`, late ones included. */
+export const getAgenda = async (call: Request, timeZone: string, days: number) =>
+	await listTasks(call, '/api/agenda', { zone: timeZone, days });
+
+export const getFilteredTasks = async (call: Request, filterId: string, timeZone: string) =>
+	await listTasks(call, `/api/filters/${encodeURIComponent(filterId)}/tasks`, { zone: timeZone });
+
 export async function getBoard(call: Request, boardId: string): Promise<Board> {
 	return (await call({
 		method: 'GET',

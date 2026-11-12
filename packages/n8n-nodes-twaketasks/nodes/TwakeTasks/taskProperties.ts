@@ -202,6 +202,25 @@ export const taskProperties: INodeProperties[] = [
 				action: 'Follow a task',
 			},
 			{
+				name: 'Get Agenda',
+				value: 'getAgenda',
+				description:
+					'List the open tasks due in the coming days, late ones included, assigned to the user or to nobody',
+				action: 'Get the agenda of tasks',
+			},
+			{
+				name: 'Get Filtered',
+				value: 'getFiltered',
+				description: 'List the tasks matching a saved filter of the user',
+				action: 'Get the tasks of a filter',
+			},
+			{
+				name: 'Get My Tasks',
+				value: 'getMine',
+				description: 'List the open tasks assigned to the user, on every board',
+				action: 'Get my tasks',
+			},
+			{
 				name: 'Move',
 				value: 'move',
 				description: 'Move a task to a section of its board',
@@ -254,7 +273,27 @@ export const taskProperties: INodeProperties[] = [
 		default: '',
 		description:
 			'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-		displayOptions: { show: { resource: ['task'] } },
+		displayOptions: showFor(['create', ...withTaskId]),
+	},
+	{
+		displayName: 'Days',
+		name: 'days',
+		type: 'number',
+		typeOptions: { minValue: 1, maxValue: 60 },
+		default: 7,
+		description: 'Number of days to look ahead, today included',
+		displayOptions: showFor(['getAgenda']),
+	},
+	{
+		displayName: 'Filter Name or ID',
+		name: 'filterId',
+		type: 'options',
+		typeOptions: { loadOptionsMethod: 'getFilters' },
+		required: true,
+		default: '',
+		description:
+			'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		displayOptions: showFor(['getFiltered']),
 	},
 	{
 		displayName: 'Task ID',

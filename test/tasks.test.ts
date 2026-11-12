@@ -10,6 +10,9 @@ import {
 	addReminder,
 	completeTask,
 	createTask,
+	getAgenda,
+	getFilteredTasks,
+	getMyTasks,
 	moveTask,
 	refusalMessage,
 	removeReminder,
@@ -182,4 +185,23 @@ test('reads the code of an API error, as an object or as text', () => {
 		'Twake Tasks refused the request: invalid_section',
 	);
 	assert.equal(refusalMessage({ context: { data: 'Bad Gateway' } }), undefined);
+});
+
+test('lists my tasks, the agenda and the tasks of a filter, one item per task', async () => {
+	const { calls, call } = makeCall([
+		{ tasks: [{ id: 't1' }, { id: 't2' }] },
+		{ today: '2026-11-12', tasks: [{ id: 't3' }] },
+		{ tasks: [] },
+	]);
+	assert.deepEqual(await getMyTasks(call), [{ id: 't1' }, { id: 't2' }]);
+	assert.deepEqual(await getAgenda(call, 'Europe/Paris', 7), [{ id: 't3' }]);
+	assert.deepEqual(await getFilteredTasks(call, 'f 1', 'Europe/Paris'), []);
+	assert.deepEqual(
+		calls.map(({ method, url, qs }) => [method, url, qs]),
+		[
+			['GET', '/api/my-tasks', undefined],
+			['GET', '/api/agenda', { zone: 'Europe/Paris', days: 7 }],
+			['GET', '/api/filters/f%201/tasks', { zone: 'Europe/Paris' }],
+		],
+	);
 });
