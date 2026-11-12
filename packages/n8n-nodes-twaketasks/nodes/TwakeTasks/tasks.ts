@@ -90,7 +90,10 @@ export async function updateTask(
 	taskId: string,
 	{ description, clear = [], duration, recurrence, ...fields }: TaskFields,
 ): Promise<IDataObject> {
-	const changes: IDataObject = { ...fields };
+	// An empty field is left as it is, Clear Fields empties it.
+	const changes: IDataObject = Object.fromEntries(
+		Object.entries(fields).filter(([, value]) => value !== '' && value !== undefined),
+	);
 	if (changes.dueDate) changes.dueDate = day(changes.dueDate);
 	if (changes.deadline) changes.deadline = day(changes.deadline);
 	if (duration?.value) changes.duration = duration.value;
@@ -147,7 +150,7 @@ export async function moveTask(
 }
 
 /** The code of the backend's `{ "error": "<code>" }` answer, wherever n8n keeps it. */
-export function apiErrorCode(error: unknown): string | undefined {
+function apiErrorCode(error: unknown): string | undefined {
 	const { context, cause } = error as {
 		context?: { data?: unknown };
 		cause?: { response?: { data?: unknown } };
@@ -167,9 +170,18 @@ export function apiErrorCode(error: unknown): string | undefined {
 	return undefined;
 }
 
+/** The message for a refusal of the backend, undefined for an error without its code. */
+export function refusalMessage(error: unknown): string | undefined {
+	const code = apiErrorCode(error);
+	return code ? `Twake Tasks refused the request: ${code}` : undefined;
+}
+
 const DONE_CATEGORIES = ['completed', 'canceled'];
 
-/** A task in a section is completed, canceled or reopened by moving it to a section of that kind. */
+/**
+ * A task in a section is completed, canceled or reopened by moving it to a section of that kind.
+ * A recurring task completed this way stays where it is, with its next due date.
+ */
 export async function completeTask(
 	call: Request,
 	boardId: string,
@@ -192,8 +204,7 @@ export async function completeTask(
 		const kind = state === 'open' ? 'open' : state;
 		throw new Error(`The board has no ${kind} section to move the task to`);
 	}
-	await moveTask(call, boardId, taskId, section.id);
-	return { ...done(taskId), sectionId: section.id };
+	return await moveTask(call, boardId, taskId, section.id);
 }
 
 export async function addComment(
