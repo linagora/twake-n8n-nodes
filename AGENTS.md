@@ -51,6 +51,10 @@ The target is n8n verification (D9).
 - `stackToken.ts` is copied into each cozy-stack package, as packages cannot depend on each other. The
   copies stay identical.
 
+## Developing
+
+When developing or updating a node, test it on a real browser like Chrome.
+
 ## Publishing
 
 Publishing is disabled. Do not enable it unless asked.
