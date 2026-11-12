@@ -19,8 +19,12 @@ import {
 	addReminder,
 	completeTask,
 	createTask,
+	getAgenda,
 	getBoard,
+	getFilteredTasks,
+	getMyTasks,
 	listBoards,
+	listFilters,
 	moveTask,
 	removeReminder,
 	setAssignees,
@@ -132,6 +136,12 @@ export class TwakeTasksNode implements INodeType {
 					.filter((board) => !board.archived)
 					.map((board) => ({ name: String(board.name), value: String(board.id) }));
 			},
+			async getFilters(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				return (await listFilters(await caller(this))).map((filter) => ({
+					name: String(filter.name),
+					value: String(filter.id),
+				}));
+			},
 			async getSections(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				return await sectionOptions(this, 'boardId');
 			},
@@ -171,6 +181,19 @@ export class TwakeTasksNode implements INodeType {
 				}
 
 				const operation = param('operation') as string;
+				const tasks =
+					operation === 'getMine'
+						? getMyTasks(call)
+						: operation === 'getAgenda'
+							? getAgenda(call, timeZone, param('days') as number)
+							: operation === 'getFiltered'
+								? getFilteredTasks(call, param('filterId') as string, timeZone)
+								: null;
+				if (tasks) {
+					for (const json of await tasks) out.push({ json, pairedItem });
+					continue;
+				}
+
 				const boardId = param('boardId') as string;
 				const taskId = operation === 'create' ? '' : (param('taskId') as string);
 				let json: IDataObject;

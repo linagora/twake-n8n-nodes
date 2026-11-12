@@ -33,6 +33,15 @@ nothing output `{ success: true, taskId }`.
   Dates without a time zone are in the time zone of the workflow. Outputs the `id` of the reminder.
 - **Task > Remove Reminder**: removes a reminder by that ID.
 
+These three read the tasks of the connected user on every board, one item per task, with the board
+task fields plus `boardId`, `boardName`, `projectId`, `category` and `parentTitle`. Days are counted
+in the time zone of the workflow, and the whole list comes out at once.
+
+- **Task > Get My Tasks**: the open tasks assigned to the user.
+- **Task > Get Agenda**: the open tasks due in the next **Days** (7 by default, 60 at most), late ones
+  included, assigned to the user or, outside managed projects, to nobody.
+- **Task > Get Filtered**: the tasks matching a saved filter of the user, chosen in a list.
+
 Errors of Twake Tasks show their code, such as `stale_neighbours`.
 
 ## Usage
