@@ -1,13 +1,13 @@
 {
-	"name": "n8n-nodes-twakesettings",
+	"name": "n8n-nodes-twakeaccount",
 	"version": "0.1.0",
-	"description": "n8n community node to interact with Twake Settings",
+	"description": "n8n community node to interact with a Twake account",
 	"license": "MIT",
-	"homepage": "https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twakesettings#readme",
+	"homepage": "https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twakeaccount#readme",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/linagora/twake-n8n-nodes.git",
-		"directory": "packages/n8n-nodes-twakesettings"
+		"directory": "packages/n8n-nodes-twakeaccount"
 	},
 	"keywords": [
 		"n8n-community-node-package"
@@ -28,10 +28,10 @@
 		"n8nNodesApiVersion": 1,
 		"strict": true,
 		"credentials": [
-			"dist/credentials/TwakeSettingsOAuth2Api.credentials.js"
+			"dist/credentials/TwakeAccountOAuth2Api.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/TwakeSettings/TwakeSettingsNode.node.js"
+			"dist/nodes/TwakeAccount/TwakeAccountNode.node.js"
 		]
 	},
 	"peerDependencies": {

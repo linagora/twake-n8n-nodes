@@ -12,7 +12,7 @@ parentheses: `grep -nE '^#{2,3} .*2026-11-09' docs/DECISION.md` lists what one d
 
 One repository, `linagora/twake-n8n-nodes`, with one folder per npm package under `packages/`.
 
-## D2. One node per Twake app, eight in all (decided, 2026-11-05)
+## D2. One node per Twake app, eight in all (decided, 2026-11-05; changed by D15, 2026-11-12)
 
 | Node     | Backend                     |
 | -------- | --------------------------- |
@@ -72,7 +72,7 @@ The target is n8n's verification: listed in the nodes panel and available on n8n
 its rules: `n8n-node` tooling, no runtime dependencies, no environment or file access, MIT, English,
 publication from GitHub Actions with provenance.
 
-## D10. Eight packages, each with one node and one credential (decided, 2026-11-09)
+## D10. Eight packages, each with one node and one credential (decided, 2026-11-09; changed by D15, 2026-11-12)
 
 n8n's rule is one third-party service per package, and `no-credential-reuse` forbids a package from
 using another package's credential, with no exception. So verified packages cannot share a login: a
@@ -108,3 +108,13 @@ stays apart until D11 is settled.
 
 The client cannot ship in the packages: a secret in an npm package is public, and the redirect URL is
 tied to one n8n host. See [AUTHENTICATION.md](AUTHENTICATION.md#preset-sso-client).
+
+## D15. Home and Settings are one Account node (decided, 2026-11-12; changes D2 and D10)
+
+Home and Settings share cozy-stack as their backend and mean almost the same thing to a user, so two
+nodes made no sense. One package, `n8n-nodes-twakeaccount`, has the **Twake Account** node and its
+credential. It replaces `n8n-nodes-twakehome` and `n8n-nodes-twakesettings`, which were never
+published.
+
+There are now seven nodes and seven packages, six of them SSO-based. Where an earlier entry names
+Settings or Home, read Account.

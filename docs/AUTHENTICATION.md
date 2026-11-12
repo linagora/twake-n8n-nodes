@@ -1,6 +1,6 @@
 # Authentication
 
-Current state of authentication in this repository, as of 2026-11-10. The choices behind it are in [DECISION.md](DECISION.md).
+Current state of authentication in this repository, as of 2026-11-12. The choices behind it are in [DECISION.md](DECISION.md).
 
 Measurements come from the dev environment on 2026-11-09, with n8n 2.46.6. Client secrets and tokens
 never go in this file.
@@ -33,10 +33,10 @@ dev yet.
 Twake Tasks calls its backend directly with the SSO access token (D8), which must carry the
 `twaketasks` audience. Its credential is `twakeTasksOAuth2Api`. Not tested on dev yet.
 
-## Twake Home
+## Twake Account
 
-Twake Home calls cozy-stack with a stack token obtained from `/auth/token_exchange`, like Twake
-Drive (D7). Its credential is `twakeHomeOAuth2Api`. Not tested on dev yet.
+Twake Account calls cozy-stack with a stack token obtained from `/auth/token_exchange`, like Twake
+Drive (D7). Its credential is `twakeAccountOAuth2Api`. Not tested on dev yet.
 
 ## Login
 
@@ -52,7 +52,7 @@ Drive (D7). Its credential is `twakeHomeOAuth2Api`. Not tested on dev yet.
 
 An n8n admin can preset the client with n8n's
 [credential overwrites](https://docs.n8n.io/administer/manage-credentials/credential-overwrites)
-(D14). n8n hides the overwritten fields, and Drive, Settings and Home read the instance from the SSO,
+(D14). n8n hides the overwritten fields, and Drive and Account read the instance from the SSO,
 so the user only clicks **Connect**.
 
 1. Start n8n with `CREDENTIALS_OVERWRITE_ENDPOINT`, `CREDENTIALS_OVERWRITE_ENDPOINT_AUTH_TOKEN` and

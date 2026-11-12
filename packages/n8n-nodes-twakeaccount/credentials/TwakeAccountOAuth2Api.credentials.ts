@@ -2,19 +2,19 @@ import type { Icon, ICredentialType, INodeProperties } from 'n8n-workflow';
 
 import { exchangeForStackToken } from './stackToken';
 
-export class TwakeHomeOAuth2Api implements ICredentialType {
-	displayName = 'Twake Home OAuth2 API';
+export class TwakeAccountOAuth2Api implements ICredentialType {
+	displayName = 'Twake Account OAuth2 API';
 
-	name = 'twakeHomeOAuth2Api';
+	name = 'twakeAccountOAuth2Api';
 
 	documentationUrl =
-		'https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twakehome#credentials';
+		'https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twakeaccount#credentials';
 
 	extends = ['oAuth2Api'];
 
 	icon: Icon = {
-		light: 'file:../nodes/TwakeHome/icon.svg',
-		dark: 'file:../nodes/TwakeHome/icon.svg',
+		light: 'file:../nodes/TwakeAccount/icon.svg',
+		dark: 'file:../nodes/TwakeAccount/icon.svg',
 	};
 
 	preAuthentication = exchangeForStackToken;
