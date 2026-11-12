@@ -100,11 +100,31 @@ test('searches with a back-reference and pages until a short page', async () => 
 
 test('searches up to a limit', async () => {
 	const { calls, call } = makeCall([
-		answer(['Email/query', { ids: ['e0', 'e1'] }, 'q'], ['Email/get', { list: [{}, {}] }, 'g']),
+		answer(
+			['Email/query', { ids: ['e0', 'e1'] }, 'q'],
+			['Email/get', { list: [{ id: 'e0' }, { id: 'e1' }] }, 'g'],
+		),
 	]);
 	await searchEmails(call, account, {}, 2);
 	assert.equal(calls.length, 1);
 	assert.equal((bodyOf(calls[0]).methodCalls[0] as [string, { limit: number }])[1].limit, 2);
+});
+
+test('keeps the order of the query, and pages by query IDs when an email is not found', async () => {
+	const { calls, call } = makeCall([
+		answer(
+			['Email/query', { ids: ['e0', 'e1', 'e2'] }, 'q'],
+			['Email/get', { list: [{ id: 'e2' }, { id: 'e0' }], notFound: ['e1'] }, 'g'],
+		),
+		answer(['Email/query', { ids: ['e3'] }, 'q'], ['Email/get', { list: [{ id: 'e3' }] }, 'g']),
+	]);
+	const output = await searchEmails(call, account, {}, 3);
+	assert.deepEqual(output, [{ id: 'e0' }, { id: 'e2' }, { id: 'e3' }]);
+	const [, second] = calls.map(
+		(options) =>
+			(bodyOf(options).methodCalls[0] as [string, { position: number; limit: number }])[1],
+	);
+	assert.deepEqual([second.position, second.limit], [3, 1]);
 });
 
 test('gets an email with its bodies, and throws on an unknown ID', async () => {
@@ -126,7 +146,7 @@ test('gets the emails of a thread with a back-reference', async () => {
 	const { calls, call } = makeCall([
 		answer(
 			['Thread/get', { list: [{ id: 't1', emailIds: ['e1', 'e2'] }], notFound: [] }, 't'],
-			['Email/get', { list: [{ id: 'e1' }, { id: 'e2' }] }, 'g'],
+			['Email/get', { list: [{ id: 'e2' }, { id: 'e1' }] }, 'g'],
 		),
 	]);
 	assert.deepEqual(await getThread(call, account, 't1'), [{ id: 'e1' }, { id: 'e2' }]);

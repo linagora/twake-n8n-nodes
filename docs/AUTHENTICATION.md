@@ -14,7 +14,7 @@ allows them.
 ## Twake Mail
 
 Twake Mail calls the JMAP server directly with the SSO access token (D8), which must carry the
-`james` audience. Its credential is `twakeMailOAuth2Api`. Not tested on dev yet.
+`james` audience. Its credential is `twakeMailOAuth2Api`. Tested on dev on 2026-11-12: the token is accepted.
 
 ## Twake Contacts
 
