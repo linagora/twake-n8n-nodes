@@ -31,7 +31,8 @@ dev yet.
 ## Twake Tasks
 
 Twake Tasks calls its backend directly with the SSO access token (D8), which must carry the
-`twaketasks` audience. Its credential is `twakeTasksOAuth2Api`. Not tested on dev yet.
+`twaketasks` audience. Its credential is `twakeTasksOAuth2Api`. Tested on dev on 2026-11-12 with a
+preset SSO client: the token is accepted, and the project and task operations answered.
 
 ## Twake Account
 
