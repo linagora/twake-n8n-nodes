@@ -36,7 +36,8 @@ Twake Tasks calls its backend directly with the SSO access token (D8), which mus
 ## Twake Account
 
 Twake Account calls cozy-stack with a stack token obtained from `/auth/token_exchange`, like Twake
-Drive (D7). Its credential is `twakeAccountOAuth2Api`. Not tested on dev yet.
+Drive (D7). Its credential is `twakeAccountOAuth2Api`. Tested on dev on 2026-11-12 with a preset SSO
+client (D14): the credential connected with only **Connect**, and both operations answered.
 
 ## Login
 
