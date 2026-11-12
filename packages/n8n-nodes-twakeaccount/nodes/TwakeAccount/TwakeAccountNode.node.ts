@@ -10,6 +10,7 @@ import {
 } from 'n8n-workflow';
 
 import { instanceUrlOf } from '../../credentials/stackToken';
+import { listAll } from './pagination';
 
 const CREDENTIAL_TYPE = 'twakeAccountOAuth2Api';
 
@@ -81,24 +82,27 @@ export class TwakeAccountNode implements INodeType {
 		for (const [itemIndex] of this.getInputData().entries()) {
 			try {
 				const isApp = this.getNodeParameter('resource', itemIndex) === 'app';
-				const response = (await this.helpers.httpRequestWithAuthentication.call(
-					this,
-					CREDENTIAL_TYPE,
-					{
-						method: 'GET',
-						url: `${instanceUrl}${isApp ? '/apps/' : '/settings/disk-usage'}`,
-						headers: { Accept: 'application/vnd.api+json' },
-						json: true,
-					},
-					{
-						oauth2: {
-							// The token signing this request comes from the stack, n8n can't refresh it
-							skipTokenRefresh: true,
+				const request = async (url: string, qs?: IDataObject) =>
+					(await this.helpers.httpRequestWithAuthentication.call(
+						this,
+						CREDENTIAL_TYPE,
+						{
+							method: 'GET',
+							url: `${instanceUrl}${url}`,
+							qs,
+							headers: { Accept: 'application/vnd.api+json' },
+							json: true,
 						},
-					},
-				)) as IDataObject;
-				// One item per app: the first page holds 100 apps, more than an instance has
-				const items = isApp ? ((response.data as IDataObject[] | undefined) ?? []) : [response];
+						{
+							oauth2: {
+								// The token signing this request comes from the stack, n8n can't refresh it
+								skipTokenRefresh: true,
+							},
+						},
+					)) as IDataObject;
+				const items = isApp
+					? await listAll((startKey) => request('/apps/', startKey ? { start_key: startKey } : {}))
+					: [await request('/settings/disk-usage')];
 				for (const json of items) {
 					out.push({ json, pairedItem: { item: itemIndex } });
 				}
