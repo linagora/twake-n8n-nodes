@@ -118,3 +118,8 @@ published.
 
 There are now seven nodes and seven packages, six of them SSO-based. Where an earlier entry names
 Settings or Home, read Account.
+
+## D16. Nodes never delete for good (decided, 2026-11-16)
+
+A delete operation moves the item to the trash of its app, and has no option to delete it for good.
+A workflow, or an AI agent using a node as a tool, could otherwise destroy data with no way back.
