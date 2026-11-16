@@ -483,3 +483,38 @@ export async function createEmail(
 	if (!send) return created;
 	return { ...created, submissionId: setResult(u, 'send').id };
 }
+
+/** Applies a JMAP patch to an email, and returns the email as it is now. */
+export async function updateEmail(
+	call: Request,
+	account: Account,
+	emailId: string,
+	patch: IDataObject,
+): Promise<IDataObject> {
+	const { accountId } = account;
+	const { s, g } = await jmap(call, account, [
+		['Email/set', { accountId, update: { [emailId]: patch } }, 's'],
+		['Email/get', { accountId, ids: [emailId], properties: EMAIL_PROPERTIES }, 'g'],
+	]);
+	setResult(s, emailId);
+	return list(g)[0] ?? { id: emailId };
+}
+
+/** Moves an email to Trash, or with `permanently` destroys it. */
+export async function deleteEmail(
+	call: Request,
+	account: Account,
+	emailId: string,
+	permanently: boolean,
+): Promise<IDataObject> {
+	if (!permanently) {
+		const trash = (await listMailboxes(call, account)).find((mailbox) => mailbox.role === 'trash');
+		if (!trash) throw new Error('The account has no Trash mailbox');
+		return await updateEmail(call, account, emailId, { mailboxIds: { [String(trash.id)]: true } });
+	}
+	const { s } = await jmap(call, account, [
+		['Email/set', { accountId: account.accountId, destroy: [emailId] }, 's'],
+	]);
+	setResult(s, emailId);
+	return { id: emailId, deleted: true };
+}

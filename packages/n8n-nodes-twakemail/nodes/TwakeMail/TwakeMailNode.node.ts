@@ -16,6 +16,7 @@ import {
 	addresses,
 	composeContext,
 	createEmail,
+	deleteEmail,
 	downloadUrl,
 	emailFilter,
 	forwardDraft,
@@ -27,6 +28,7 @@ import {
 	mailAccount,
 	replyDraft,
 	searchEmails,
+	updateEmail,
 	type Account,
 	type Draft,
 	type Request,
@@ -51,6 +53,14 @@ const showFor = (resource: string, operation: string[]) => ({
 });
 
 const COMPOSE = ['send', 'createDraft', 'reply', 'forward'];
+
+// The patch of each operation that only changes the keywords of an email.
+const KEYWORD_PATCHES: Record<string, IDataObject> = {
+	markAsRead: { 'keywords/$seen': true },
+	markAsUnread: { 'keywords/$seen': null },
+	flag: { 'keywords/$flagged': true },
+	unflag: { 'keywords/$flagged': null },
+};
 
 const recipients = {
 	displayName: 'To',
@@ -112,6 +122,18 @@ export class TwakeMailNode implements INodeType {
 						action: 'Create a draft',
 					},
 					{
+						name: 'Delete',
+						value: 'delete',
+						description: 'Move an email to Trash, or delete it permanently',
+						action: 'Delete an email',
+					},
+					{
+						name: 'Flag',
+						value: 'flag',
+						description: 'Flag an email',
+						action: 'Flag an email',
+					},
+					{
 						name: 'Forward',
 						value: 'forward',
 						description: 'Forward an email with its attachments',
@@ -130,6 +152,24 @@ export class TwakeMailNode implements INodeType {
 						action: 'Get the attachments of an email',
 					},
 					{
+						name: 'Mark as Read',
+						value: 'markAsRead',
+						description: 'Mark an email as read',
+						action: 'Mark an email as read',
+					},
+					{
+						name: 'Mark as Unread',
+						value: 'markAsUnread',
+						description: 'Mark an email as unread',
+						action: 'Mark an email as unread',
+					},
+					{
+						name: 'Move',
+						value: 'move',
+						description: 'Move an email to a mailbox',
+						action: 'Move an email',
+					},
+					{
 						name: 'Reply',
 						value: 'reply',
 						description: 'Reply to the sender of an email',
@@ -146,6 +186,12 @@ export class TwakeMailNode implements INodeType {
 						value: 'send',
 						description: 'Send an email',
 						action: 'Send an email',
+					},
+					{
+						name: 'Unflag',
+						value: 'unflag',
+						description: 'Remove the flag of an email',
+						action: 'Unflag an email',
 					},
 				],
 			},
@@ -183,7 +229,34 @@ export class TwakeMailNode implements INodeType {
 			},
 			{
 				...emailId,
-				displayOptions: showFor('email', ['get', 'getAttachments', 'reply', 'forward']),
+				displayOptions: showFor('email', [
+					'get',
+					'getAttachments',
+					'reply',
+					'forward',
+					'move',
+					'delete',
+					...Object.keys(KEYWORD_PATCHES),
+				]),
+			},
+			{
+				displayName: 'Mailbox Name or ID',
+				name: 'mailboxId',
+				type: 'options',
+				typeOptions: { loadOptionsMethod: 'getMailboxes' },
+				required: true,
+				default: '',
+				description:
+					'Mailbox to move the email to. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				displayOptions: showFor('email', ['move']),
+			},
+			{
+				displayName: 'Permanently',
+				name: 'permanently',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to delete the email for good instead of moving it to Trash',
+				displayOptions: showFor('email', ['delete']),
 			},
 			{ ...recipients, required: true, displayOptions: showFor('email', ['send', 'forward']) },
 			{ ...recipients, displayOptions: showFor('email', ['createDraft']) },
@@ -410,6 +483,16 @@ export class TwakeMailNode implements INodeType {
 					const limit = param('returnAll') ? Infinity : (param('limit') as number);
 					for (const json of await searchEmails(call, account, filter, limit))
 						out.push({ json, pairedItem });
+				} else if (operation in KEYWORD_PATCHES || operation === 'move') {
+					const id = param('emailId') as string;
+					const patch = KEYWORD_PATCHES[operation] ?? {
+						mailboxIds: { [param('mailboxId') as string]: true },
+					};
+					out.push({ json: await updateEmail(call, account, id, patch), pairedItem });
+				} else if (operation === 'delete') {
+					const id = param('emailId') as string;
+					const json = await deleteEmail(call, account, id, param('permanently') as boolean);
+					out.push({ json, pairedItem });
 				} else if (COMPOSE.includes(operation)) {
 					const options = param('options', {}) as IDataObject;
 					const message = {

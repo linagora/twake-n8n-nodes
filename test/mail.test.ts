@@ -9,6 +9,7 @@ import {
 	addresses,
 	composeContext,
 	createEmail,
+	deleteEmail,
 	downloadUrl,
 	emailFilter,
 	forwardDraft,
@@ -19,6 +20,7 @@ import {
 	mailAccount,
 	replyDraft,
 	searchEmails,
+	updateEmail,
 } from '../packages/n8n-nodes-twakemail/nodes/TwakeMail/jmap.ts';
 
 const account = {
@@ -353,4 +355,53 @@ test('forwards the original email quoted in HTML, with its attachments', () => {
 			'From: Alice &lt;alice@test&gt;<br>Date: 2026-11-16T09:00:00Z<br>Subject: Plan<br>' +
 			'To: me@test, bob@test<br>Cc: Carol@test, carol@test, alice@test<br><br>a &lt; b<br>bye</div>',
 	);
+});
+
+test('updates an email with a patch and returns it as it is now', async () => {
+	const { calls, call } = makeCall([
+		answer(
+			['Email/set', { updated: { e1: null } }, 's'],
+			['Email/get', { list: [{ id: 'e1' }] }, 'g'],
+		),
+		answer(
+			['Email/set', { notUpdated: { e2: { type: 'notFound' } } }, 's'],
+			['Email/get', { list: [] }, 'g'],
+		),
+	]);
+	assert.deepEqual(await updateEmail(call, account, 'e1', { 'keywords/$seen': true }), {
+		id: 'e1',
+	});
+	assert.deepEqual(bodyOf(calls[0]).methodCalls, [
+		['Email/set', { accountId: 'a1', update: { e1: { 'keywords/$seen': true } } }, 's'],
+		['Email/get', { accountId: 'a1', ids: ['e1'], properties: EMAIL_PROPERTIES }, 'g'],
+	]);
+	await assert.rejects(updateEmail(call, account, 'e2', {}), { message: 'notFound' });
+});
+
+test('deletes an email by moving it to Trash, or permanently', async () => {
+	const { calls, call } = makeCall([
+		answer([
+			'Mailbox/get',
+			{
+				list: [
+					{ id: 'in', role: 'inbox' },
+					{ id: 'tr', role: 'trash' },
+				],
+			},
+			'm',
+		]),
+		answer(
+			['Email/set', { updated: { e1: null } }, 's'],
+			['Email/get', { list: [{ id: 'e1' }] }, 'g'],
+		),
+		answer(['Email/set', { destroyed: ['e1'] }, 's']),
+	]);
+	assert.deepEqual(await deleteEmail(call, account, 'e1', false), { id: 'e1' });
+	assert.deepEqual((bodyOf(calls[1]).methodCalls[0] as [string, { update: unknown }])[1].update, {
+		e1: { mailboxIds: { tr: true } },
+	});
+	assert.deepEqual(await deleteEmail(call, account, 'e1', true), { id: 'e1', deleted: true });
+	assert.deepEqual(bodyOf(calls[2]).methodCalls, [
+		['Email/set', { accountId: 'a1', destroy: ['e1'] }, 's'],
+	]);
 });

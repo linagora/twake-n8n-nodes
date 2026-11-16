@@ -15,13 +15,17 @@ n8n community node to read and send the emails of a [Twake Workplace](https://tw
 - **Email > Reply**: to the sender of an email, or with **Reply to All** also to its other recipients,
   in the same thread.
 - **Email > Forward**: an email with its attachments, the original quoted below the message.
+- **Email > Move**: an email to a mailbox, out of the mailboxes it was in.
+- **Email > Mark as Read**, **Mark as Unread**, **Flag** and **Unflag**: an email.
+- **Email > Delete**: an email, moved to Trash, or with **Permanently** deleted for good.
 - **Thread > Get**: the emails of a thread, from the `threadId` of any of them.
 - **Session > Get**: the JMAP session of the connected user: account IDs, capabilities and API URLs.
 
 ## Usage
 
 Set up the credential and add the node. Search and Thread > Get output one item per email, the
-other operations one item per input item.
+other operations one item per input item. Move, Mark, Flag and Delete to Trash output the email as it
+is after the change.
 
 Example workflow:
 
