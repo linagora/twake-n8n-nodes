@@ -123,3 +123,6 @@ Settings or Home, read Account.
 
 A delete operation moves the item to the trash of its app, and has no option to delete it for good.
 A workflow, or an AI agent using a node as a tool, could otherwise destroy data with no way back.
+
+Exception for now: **Twake Calendar > Event > Delete** deletes the event for good, as Twake Calendar
+has no trash for events.
