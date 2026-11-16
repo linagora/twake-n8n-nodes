@@ -15,6 +15,9 @@ Files, folders and shares are picked from a searchable list or by ID.
 - Upload, with an option to overwrite a file of the same name
 - Create from text, as a `.txt` or as a note written in Markdown, with an option to overwrite
 - Update, copy, move, rename, delete (to the trash)
+- Get edit link: a link to edit an office document in OnlyOffice, in the Drive app of the logged-in
+  user. It is not a public link, for that share by link. The output leaves out the `onlyoffice`
+  block of the stack's answer, which holds the editor token.
 
 **Folder**
 
@@ -66,6 +69,7 @@ it allows them.
 
    The [n8n app](https://github.com/linagora/n8n-app-wrapper) must be installed from the registry
    on the instance.
+
 3. In the credential, fill in the SSO URL, the client ID and secret, and click **Connect**. The
    instance URL is optional: left empty, the node uses the instance the SSO gives in the
    `workplaceFqdn` claim of the id_token.

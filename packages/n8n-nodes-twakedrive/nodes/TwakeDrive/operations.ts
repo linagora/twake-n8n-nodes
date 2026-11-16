@@ -13,7 +13,7 @@ import {
 	ROOT_DIR_ID,
 	type DriveEntry,
 } from './api';
-import { driveAppUrl, withExtensionOf } from './names';
+import { fetchDriveAppUrl, fetchEditLink, withExtensionOf, type Request } from './names';
 
 type OperationResult = Pick<INodeExecutionData, 'json' | 'binary'>;
 type Operation = (this: IExecuteFunctions, itemIndex: number) => Promise<OperationResult>;
@@ -67,6 +67,10 @@ function sourceFolderId(context: IExecuteFunctions, itemIndex: number): string {
 
 function destinationDirId(context: IExecuteFunctions, itemIndex: number): string {
 	return locatorValue(context, 'destinationFolder', itemIndex) || ROOT_DIR_ID;
+}
+
+function stackRequest(context: IExecuteFunctions): Request {
+	return async (options) => await driveRequest.call(context, options);
 }
 
 async function patchEntry(
@@ -269,6 +273,15 @@ const renameFile: Operation = async function (itemIndex) {
 	return { json: await patchEntry.call(this, fileId, { name }) };
 };
 
+const getEditLink: Operation = async function (itemIndex) {
+	const json = await fetchEditLink(
+		stackRequest(this),
+		await getInstanceUrl.call(this),
+		sourceFileId(this, itemIndex),
+	);
+	return { json };
+};
+
 // Folders
 
 const createFolder: Operation = async function (itemIndex) {
@@ -375,14 +388,7 @@ const shareByLink: Operation = async function (itemIndex) {
 	};
 	const shortcodes = created.shortcodes ?? {};
 
-	const capabilities = await driveRequest.call(this, {
-		method: 'GET',
-		url: '/settings/capabilities',
-	});
-	const { flat_subdomains: flat } = (
-		capabilities.data as { attributes: { flat_subdomains: boolean } }
-	).attributes;
-	const appUrl = driveAppUrl(await getInstanceUrl.call(this), flat);
+	const appUrl = await fetchDriveAppUrl(stackRequest(this), await getInstanceUrl.call(this));
 
 	const shareUrls = Object.fromEntries(
 		Object.entries(shortcodes).map(([label, code]) => [
@@ -418,6 +424,7 @@ export const operations: Record<string, Operation> = {
 	copyFile,
 	createFileFromText,
 	deleteFile,
+	getEditLink,
 	moveFile,
 	renameFile,
 	createFolder,
