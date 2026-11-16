@@ -18,6 +18,8 @@ n8n community node to read and send the emails of a [Twake Workplace](https://tw
 - **Email > Move**: an email to a mailbox, out of the mailboxes it was in.
 - **Email > Mark as Read**, **Mark as Unread**, **Flag** and **Unflag**: an email.
 - **Email > Delete**: an email, moved to Trash, or with **Permanently** deleted for good.
+- **Email > Answer Invitation**: accept, decline or maybe accept the invitation of an email. The
+  server records the answer in the calendar and emails the organizer, in **Language** if set.
 - **Label > Get Many**: the labels, with the keyword each one sets on emails. Search by **Has
   Keyword** finds the emails of a label.
 - **Label > Create**: a label, with a color and a description.
