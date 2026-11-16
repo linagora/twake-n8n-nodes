@@ -126,3 +126,13 @@ A workflow, or an AI agent using a node as a tool, could otherwise destroy data 
 
 Exception for now: **Twake Calendar > Event > Delete** deletes the event for good, as Twake Calendar
 has no trash for events.
+
+## D17. Twake Chat logs in through the SSO with Synapse's JWT login (decided, 2026-11-16; settles D11)
+
+The Chat credential is an SSO credential like the others, `twakeChatOAuth2Api`, and the user no longer
+pastes a Matrix token. Synapse accepts the SSO id_token at its JWT login, as Chat mobile does, and n8n
+trades it for a Matrix token on a fixed `N8N` device. See
+[AUTHENTICATION.md](AUTHENTICATION.md#login-to-matrix).
+
+Each Synapse must list the n8n SSO client in `jwt_config.audiences`. To end access, revoke the login at
+the SSO: logging out the Matrix device only lasts until the next login.

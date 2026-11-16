@@ -23,10 +23,11 @@ carry the `openpaas` audience. Its credential is `twakeContactsOAuth2Api`. Not t
 
 ## Twake Chat
 
-Twake Chat calls the Matrix homeserver with a Matrix access token pasted in the credential, as Synapse
-refuses the SSO token (D11). Its credential is `twakeChatApi`. The token is separate from the SSO:
-revoking the login at the SSO does not end it, logging out that Matrix session does. Not tested on
-dev yet.
+Twake Chat calls the Matrix homeserver with a Matrix access token obtained from Synapse's JWT login
+with the SSO id_token (D17). Its credential is `twakeChatOAuth2Api`. Tested on dev on 2026-11-16 with a
+preset SSO client, once the `n8n` client was added to the `jwt_config.audiences` of Synapse: the login
+is accepted, sending, editing and reacting work, and three runs used one `n8n` device. Before that
+change, Synapse answered `Invalid claim 'aud'`.
 
 ## Twake Tasks
 
@@ -84,6 +85,23 @@ cozy-stack refuses the SSO token (`400 Invalid JWT token`). The credential runs
 5. Use the returned stack token for the request. n8n does not save it, and the node sets
    `oauth2: { skipTokenRefresh: true }`.
 
+## Login to Matrix
+
+Synapse refuses the SSO access token, and accepts an id_token at
+`POST /_matrix/client/v3/login` with `{ type: 'org.matrix.login.jwt', token }` when its `jwt_config`
+lists the client in `audiences`. The credential runs `loginToMatrix` as its `preAuthentication`:
+
+1. Look in a cache keyed by the refresh token, per n8n process. The cached Matrix token is used while
+   n8n holds the same id_token.
+2. Refresh at the SSO to get a fresh `id_token`, as Synapse refuses an expired one.
+3. Log in with it on the device `N8N`. Reusing the device ID replaces the token of that device, so
+   logins do not pile up devices.
+4. Use the returned Matrix token for the request. The node lets n8n refresh on a 401: the refresh
+   changes the id_token, so a revoked Matrix token leads to a new login.
+
+Matrix tokens issued this way do not expire. Two n8n processes or two credentials of one user replace
+each other's token, and each recovers with one more login after a 401.
+
 ## Lifetimes
 
 | Token                                | Lifetime                      | Source                 |
@@ -93,6 +111,7 @@ cozy-stack refuses the SSO token (`400 Invalid JWT token`). The credential runs
 | SSO refresh token, no offline access | SSO session, 20 hours at most | Internal documentation |
 | Stack access token                   | 7 days                        | cozy-stack code        |
 | Stack token cached by the node       | 1 hour                        | `stackToken.ts`        |
+| Matrix token from the JWT login      | No expiry, until replaced     | Synapse                |
 
 ## Scope of the tokens
 
