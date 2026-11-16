@@ -9,7 +9,7 @@ import {
 	type JsonObject,
 } from 'n8n-workflow';
 
-const CREDENTIAL_TYPE = 'twakeChatApi';
+const CREDENTIAL_TYPE = 'twakeChatOAuth2Api';
 
 export class TwakeChatNode implements INodeType {
 	description: INodeTypeDescription = {
@@ -54,7 +54,9 @@ export class TwakeChatNode implements INodeType {
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const { homeserverUrl } = await this.getCredentials<{ homeserverUrl: string }>(CREDENTIAL_TYPE);
+		const { apiUrl: homeserverUrl } = await this.getCredentials<{ apiUrl: string }>(
+			CREDENTIAL_TYPE,
+		);
 		const baseUrl = homeserverUrl.replace(/\/+$/, '');
 		const out: INodeExecutionData[] = [];
 

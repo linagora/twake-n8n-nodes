@@ -28,7 +28,7 @@
 		"n8nNodesApiVersion": 1,
 		"strict": true,
 		"credentials": [
-			"dist/credentials/TwakeChatApi.credentials.js"
+			"dist/credentials/TwakeChatOAuth2Api.credentials.js"
 		],
 		"nodes": [
 			"dist/nodes/TwakeChat/TwakeChatNode.node.js"
