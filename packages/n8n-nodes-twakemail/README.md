@@ -17,7 +17,7 @@ n8n community node to read and send the emails of a [Twake Workplace](https://tw
 - **Email > Forward**: an email with its attachments, the original quoted below the message.
 - **Email > Move**: an email to a mailbox, out of the mailboxes it was in.
 - **Email > Mark as Read**, **Mark as Unread**, **Flag** and **Unflag**: an email.
-- **Email > Delete**: an email, moved to Trash, or with **Permanently** deleted for good.
+- **Email > Delete**: an email, moved to Trash. The node never deletes for good.
 - **Email > Answer Invitation**: accept, decline or maybe accept the invitation of an email. The
   server records the answer in the calendar and emails the organizer, in **Language** if set.
 - **Label > Get Many**: the labels, with the keyword each one sets on emails. Search by **Has
@@ -37,8 +37,8 @@ n8n community node to read and send the emails of a [Twake Workplace](https://tw
 
 Set up the credential and add the node. Search and Thread > Get output one item per email, Label >
 Get Many one item per label, Team Mailbox > Get Many one item per team mailbox, the other operations
-one item per input item. Move, Mark, Flag, Delete to Trash and Label > Apply output the email as it
-is after the change.
+one item per input item. Move, Mark, Flag, Delete and Label > Apply output the email as it is after
+the change.
 
 Example workflow:
 
