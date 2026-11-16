@@ -30,6 +30,12 @@ export const fileProps: INodeProperties[] = [
 				action: 'Delete file',
 			},
 			{
+				name: 'Get Edit Link',
+				value: 'getEditLink',
+				description: 'Get a link to edit an office document in OnlyOffice',
+				action: 'Get edit link of file',
+			},
+			{
 				name: 'Move',
 				value: 'moveFile',
 				description: 'Move a file to another folder',
@@ -56,7 +62,9 @@ export const fileProps: INodeProperties[] = [
 		],
 	},
 
-	fileLocator({ operation: ['copyFile', 'deleteFile', 'moveFile', 'renameFile', 'updateFile'] }),
+	fileLocator({
+		operation: ['copyFile', 'deleteFile', 'getEditLink', 'moveFile', 'renameFile', 'updateFile'],
+	}),
 	destinationLocator({ operation: ['copyFile', 'moveFile', 'createFileFromText', 'uploadFile'] }),
 
 	{
