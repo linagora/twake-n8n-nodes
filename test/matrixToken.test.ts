@@ -5,8 +5,8 @@ import type { IHttpRequestOptions } from 'n8n-workflow';
 
 import {
 	clearMatrixTokenCache,
-	forgetMatrixToken,
 	loginToMatrix,
+	retryWithNewLogin,
 } from '../packages/n8n-nodes-twakechat/credentials/matrixToken.ts';
 
 const credentials = {
@@ -54,34 +54,60 @@ test('refreshes at the SSO, then logs in to Matrix with the id_token on the n8n 
 	});
 });
 
-test('reuses the Matrix token for an hour, or until it is forgotten', async (t) => {
+const tokenOf = async (helper: unknown) =>
+	(
+		(await loginToMatrix.call(helper as never, credentials)).oauthTokenData as {
+			access_token: string;
+		}
+	).access_token;
+
+test('reuses the Matrix token for an hour', async (t) => {
 	t.mock.timers.enable({ apis: ['Date'], now: 0 });
 	const { calls, helper } = makeHelper([
 		{ id_token: 'fresh' },
 		{ access_token: 'matrix' },
 		{ id_token: 'fresh' },
 		{ access_token: 'matrix2' },
-		{ id_token: 'fresh' },
-		{ access_token: 'matrix3' },
 	]);
-	const token = async () =>
-		(
-			(await loginToMatrix.call(helper as never, credentials)).oauthTokenData as {
-				access_token: string;
-			}
-		).access_token;
-
-	assert.equal(await token(), 'matrix');
-	assert.equal(await token(), 'matrix');
+	assert.equal(await tokenOf(helper), 'matrix');
+	assert.equal(await tokenOf(helper), 'matrix');
 	assert.equal(calls.length, 2);
 
-	// The node forgets the token when the homeserver answers 401.
-	forgetMatrixToken(credentials);
-	assert.equal(await token(), 'matrix2');
-
 	t.mock.timers.tick(60 * 60 * 1000);
-	assert.equal(await token(), 'matrix3');
-	assert.equal(calls.length, 6);
+	assert.equal(await tokenOf(helper), 'matrix2');
+	assert.equal(calls.length, 4);
+});
+
+test('retries once with a new Matrix login after a 401', async () => {
+	const { calls, helper } = makeHelper([
+		{ id_token: 'fresh' },
+		{ access_token: 'revoked' },
+		{ id_token: 'fresh' },
+		{ access_token: 'matrix' },
+	]);
+	await tokenOf(helper);
+
+	// As n8n does, each request runs the preAuthentication, then sends with the token it returns.
+	const sent: string[] = [];
+	const request = async () => {
+		const token = await tokenOf(helper);
+		sent.push(token);
+		if (token === 'revoked') throw Object.assign(new Error('401'), { httpCode: '401' });
+		return 'ok';
+	};
+	assert.equal(await retryWithNewLogin(credentials, request), 'ok');
+	assert.deepEqual(sent, ['revoked', 'matrix']);
+	assert.equal(calls.length, 4);
+});
+
+test('does not retry another error', async () => {
+	let attempts = 0;
+	const request = async () => {
+		attempts++;
+		throw Object.assign(new Error('403'), { httpCode: '403' });
+	};
+	await assert.rejects(retryWithNewLogin(credentials, request), /403/);
+	assert.equal(attempts, 1);
 });
 
 test('says which side refused', async () => {
