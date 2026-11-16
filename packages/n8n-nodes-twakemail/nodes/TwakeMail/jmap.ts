@@ -500,23 +500,15 @@ export async function updateEmail(
 	return list(g)[0] ?? { id: emailId };
 }
 
-/** Moves an email to Trash, or with `permanently` destroys it. */
+/** Moves an email to Trash. Nodes never delete for good (D16). */
 export async function deleteEmail(
 	call: Request,
 	account: Account,
 	emailId: string,
-	permanently: boolean,
 ): Promise<IDataObject> {
-	if (!permanently) {
-		const trash = (await listMailboxes(call, account)).find((mailbox) => mailbox.role === 'trash');
-		if (!trash) throw new Error('The account has no Trash mailbox');
-		return await updateEmail(call, account, emailId, { mailboxIds: { [String(trash.id)]: true } });
-	}
-	const { s } = await jmap(call, account, [
-		['Email/set', { accountId: account.accountId, destroy: [emailId] }, 's'],
-	]);
-	setResult(s, emailId);
-	return { id: emailId, deleted: true };
+	const trash = (await listMailboxes(call, account)).find((mailbox) => mailbox.role === 'trash');
+	if (!trash) throw new Error('The account has no Trash mailbox');
+	return await updateEmail(call, account, emailId, { mailboxIds: { [String(trash.id)]: true } });
 }
 
 const LABELS = [...MAIL, 'com:linagora:params:jmap:labels'];

@@ -386,7 +386,7 @@ test('updates an email with a patch and returns it as it is now', async () => {
 	await assert.rejects(updateEmail(call, account, 'e2', {}), { message: 'notFound' });
 });
 
-test('deletes an email by moving it to Trash, or permanently', async () => {
+test('deletes an email by moving it to Trash, and never for good', async () => {
 	const { calls, call } = makeCall([
 		answer([
 			'Mailbox/get',
@@ -402,16 +402,13 @@ test('deletes an email by moving it to Trash, or permanently', async () => {
 			['Email/set', { updated: { e1: null } }, 's'],
 			['Email/get', { list: [{ id: 'e1' }] }, 'g'],
 		),
-		answer(['Email/set', { destroyed: ['e1'] }, 's']),
 	]);
-	assert.deepEqual(await deleteEmail(call, account, 'e1', false), { id: 'e1' });
+	assert.deepEqual(await deleteEmail(call, account, 'e1'), { id: 'e1' });
 	assert.deepEqual((bodyOf(calls[1]).methodCalls[0] as [string, { update: unknown }])[1].update, {
 		e1: { mailboxIds: { tr: true } },
 	});
-	assert.deepEqual(await deleteEmail(call, account, 'e1', true), { id: 'e1', deleted: true });
-	assert.deepEqual(bodyOf(calls[2]).methodCalls, [
-		['Email/set', { accountId: 'a1', destroy: ['e1'] }, 's'],
-	]);
+	assert.equal(calls.length, 2);
+	assert.ok(calls.every((options) => !JSON.stringify(options.body).includes('destroy')));
 });
 
 const LABELS = [...MAIL, 'com:linagora:params:jmap:labels'];

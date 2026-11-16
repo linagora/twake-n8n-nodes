@@ -140,7 +140,7 @@ export class TwakeMailNode implements INodeType {
 					{
 						name: 'Delete',
 						value: 'delete',
-						description: 'Move an email to Trash, or delete it permanently',
+						description: 'Move an email to Trash',
 						action: 'Delete an email',
 					},
 					{
@@ -349,14 +349,6 @@ export class TwakeMailNode implements INodeType {
 				placeholder: 'e.g. fr',
 				description: 'Language of the email sent to the organizer, English by default',
 				displayOptions: showFor('email', ['answerInvitation']),
-			},
-			{
-				displayName: 'Permanently',
-				name: 'permanently',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to delete the email for good instead of moving it to Trash',
-				displayOptions: showFor('email', ['delete']),
 			},
 			{ ...emailId, displayOptions: showFor('label', ['apply']) },
 			{
@@ -719,8 +711,7 @@ export class TwakeMailNode implements INodeType {
 					out.push({ json, pairedItem });
 				} else if (operation === 'delete') {
 					const id = param('emailId') as string;
-					const json = await deleteEmail(call, account, id, param('permanently') as boolean);
-					out.push({ json, pairedItem });
+					out.push({ json: await deleteEmail(call, account, id), pairedItem });
 				} else if (COMPOSE.includes(operation)) {
 					const options = param('options', {}) as IDataObject;
 					const message = {
