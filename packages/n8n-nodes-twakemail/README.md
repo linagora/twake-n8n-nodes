@@ -24,13 +24,20 @@ n8n community node to read and send the emails of a [Twake Workplace](https://tw
   Keyword** finds the emails of a label.
 - **Label > Create**: a label, with a color and a description.
 - **Label > Apply**: a label to an email.
+- **Team Mailbox > Get Many**: my team mailboxes, each with its members and their role, `member` or
+  `manager`.
+- **Team Mailbox > Add Member**: a user to a team mailbox, or a new role for a member. Only managers
+  can.
+- **Team Mailbox > Remove Member**: a user from a team mailbox. Only managers can.
+- **Team Mailbox > Revoke Access**: leave a team mailbox.
 - **Thread > Get**: the emails of a thread, from the `threadId` of any of them.
 - **Session > Get**: the JMAP session of the connected user: account IDs, capabilities and API URLs.
 
 ## Usage
 
-Set up the credential and add the node. Search and Thread > Get output one item per email, Label > Get Many one item per label, the
-other operations one item per input item. Move, Mark, Flag, Delete to Trash and Label > Apply output the email as it
+Set up the credential and add the node. Search and Thread > Get output one item per email, Label >
+Get Many one item per label, Team Mailbox > Get Many one item per team mailbox, the other operations
+one item per input item. Move, Mark, Flag, Delete to Trash and Label > Apply output the email as it
 is after the change.
 
 Example workflow:

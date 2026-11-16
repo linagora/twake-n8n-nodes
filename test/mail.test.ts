@@ -22,9 +22,12 @@ import {
 	invitationBlobIds,
 	jmap,
 	listLabels,
+	listTeamMailboxes,
 	mailAccount,
 	replyDraft,
+	revokeTeamMailboxAccess,
 	searchEmails,
+	setTeamMailboxMember,
 	updateEmail,
 } from '../packages/n8n-nodes-twakemail/nodes/TwakeMail/jmap.ts';
 
@@ -504,5 +507,76 @@ test('answers the invitation of an email, and throws when the server cannot', as
 	});
 	await assert.rejects(answerInvitation(call, account, 'e2', 'accept'), {
 		message: 'The email e2 has no invitation',
+	});
+});
+
+const TEAM_MAILBOXES = [...MAIL, 'com:linagora:params:jmap:team:mailboxes'];
+const team = { id: 'team@test', members: { 'me@test': { role: 'manager' } } };
+
+test('lists the team mailboxes with their members', async () => {
+	const { calls, call } = makeCall([answer(['TeamMailboxMember/get', { list: [team] }, 't'])]);
+	assert.deepEqual(await listTeamMailboxes(call, account), [team]);
+	assert.deepEqual(bodyOf(calls[0]), {
+		using: TEAM_MAILBOXES,
+		methodCalls: [['TeamMailboxMember/get', { accountId: 'a1', ids: null }, 't']],
+	});
+});
+
+test('adds, promotes and removes a member of a team mailbox', async () => {
+	const updated = answer(
+		['TeamMailboxMember/set', { updated: { 'team@test': null } }, 's'],
+		['TeamMailboxMember/get', { list: [team] }, 't'],
+	);
+	const { calls, call } = makeCall([
+		updated,
+		updated,
+		answer(
+			['TeamMailboxMember/set', { notUpdated: { 'team@test': { type: 'forbidden' } } }, 's'],
+			['TeamMailboxMember/get', { list: [team] }, 't'],
+		),
+	]);
+	assert.deepEqual(
+		await setTeamMailboxMember(call, account, 'team@test', 'bob@test', 'manager'),
+		team,
+	);
+	assert.deepEqual(bodyOf(calls[0]).methodCalls, [
+		[
+			'TeamMailboxMember/set',
+			{ accountId: 'a1', update: { 'team@test': { 'members/bob@test': { role: 'manager' } } } },
+			's',
+		],
+		['TeamMailboxMember/get', { accountId: 'a1', ids: ['team@test'] }, 't'],
+	]);
+	await setTeamMailboxMember(call, account, 'team@test', 'bob@test', null);
+	assert.deepEqual((bodyOf(calls[1]).methodCalls[0] as [string, { update: unknown }])[1].update, {
+		'team@test': { 'members/bob@test': null },
+	});
+	await assert.rejects(setTeamMailboxMember(call, account, 'team@test', 'bob@test', 'member'), {
+		message: 'forbidden',
+	});
+});
+
+test('revokes my access to a team mailbox, and throws when there is none', async () => {
+	const { calls, call } = makeCall([
+		answer(['TeamMailbox/revokeAccess', { revoked: ['team@test'], notRevoked: null }, 'r']),
+		answer([
+			'TeamMailbox/revokeAccess',
+			{
+				revoked: null,
+				notRevoked: { 'other@test': { type: 'notFound', description: 'No team mailbox' } },
+			},
+			'r',
+		]),
+	]);
+	assert.deepEqual(await revokeTeamMailboxAccess(call, account, 'team@test'), {
+		revoked: ['team@test'],
+		notRevoked: null,
+	});
+	assert.deepEqual(bodyOf(calls[0]), {
+		using: TEAM_MAILBOXES,
+		methodCalls: [['TeamMailbox/revokeAccess', { accountId: 'a1', ids: ['team@test'] }, 'r']],
+	});
+	await assert.rejects(revokeTeamMailboxAccess(call, account, 'other@test'), {
+		message: 'notFound: No team mailbox',
 	});
 });
