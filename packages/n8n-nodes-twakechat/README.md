@@ -59,3 +59,11 @@ To end access, revoke the login at the SSO, then log out the `n8n` device in Twa
 keeps using its Matrix token for up to an hour after the revocation, and the token stays valid at the
 homeserver until that logout. Logging out the device alone only lasts until the next request, which
 logs in again.
+
+## Version history
+
+### 0.1.0
+
+The **Twake Chat API** credential, `twakeChatApi`, which took a pasted Matrix access token, is replaced
+by the **Twake Chat OAuth2 API** credential, `twakeChatOAuth2Api`, which logs in through the Twake SSO.
+A workflow that used the Twake Chat node needs a new **Twake Chat OAuth2 API** credential.
