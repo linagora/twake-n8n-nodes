@@ -1,10 +1,22 @@
 # n8n-nodes-twakechat
 
-n8n community node to read the Matrix account of a [Twake Workplace](https://twake.app/) user.
+n8n community node to send, edit and react to messages in the Matrix rooms of a
+[Twake Workplace](https://twake.app/) user.
 
 ## Operations
 
 - **Account > Get**: the `user_id` and `device_id` of the connected Matrix account.
+- **Message > Send**: sends a text, with an optional HTML version, to a room. Outputs its `event_id`.
+- **Message > Send File**: uploads the file of an input binary field and sends it to a room, as an
+  image, audio, video or file from its MIME type. The homeserver refuses a file over its size limit or
+  quota.
+- **Message > React**: adds a reaction, such as an emoji, to a message.
+- **Message > Edit**: replaces the text of a message. Clients only show the edit on a message you sent.
+
+A room is given by its ID (`!…:server`), not its alias. A message is given by its `event_id`.
+
+The node has no end-to-end encryption. In an encrypted room, its messages are sent unencrypted, and
+other clients mark them so.
 
 ## Usage
 
@@ -13,8 +25,9 @@ Set up the credential and add the node. It outputs one item per input item.
 Example workflow:
 
 1. **Manual Trigger**.
-2. **Twake Chat**, **Account > Get**.
-3. **Edit Fields**, keeping `{{ $json.user_id }}`.
+2. **Twake Chat**, **Message > Send**, with a Room ID and a Text.
+3. **Twake Chat**, **Message > React**, with the same Room ID, `{{ $json.event_id }}` as Message ID and
+   👍 as Reaction.
 
 ## Credentials
 
