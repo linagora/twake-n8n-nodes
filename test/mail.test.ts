@@ -7,8 +7,10 @@ import {
 	EMAIL_PROPERTIES,
 	MAIL,
 	addresses,
+	applyLabel,
 	composeContext,
 	createEmail,
+	createLabel,
 	deleteEmail,
 	downloadUrl,
 	emailFilter,
@@ -17,6 +19,7 @@ import {
 	getEmail,
 	getThread,
 	jmap,
+	listLabels,
 	mailAccount,
 	replyDraft,
 	searchEmails,
@@ -404,4 +407,48 @@ test('deletes an email by moving it to Trash, or permanently', async () => {
 	assert.deepEqual(bodyOf(calls[2]).methodCalls, [
 		['Email/set', { accountId: 'a1', destroy: ['e1'] }, 's'],
 	]);
+});
+
+const LABELS = [...MAIL, 'com:linagora:params:jmap:labels'];
+
+test('lists and creates labels', async () => {
+	const { calls, call } = makeCall([
+		answer(['Label/get', { list: [{ id: 'l1', keyword: 'work' }] }, 'l']),
+		answer(['Label/set', { created: { label: { id: 'l2', keyword: 'todo' } } }, 's']),
+	]);
+	assert.deepEqual(await listLabels(call, account), [{ id: 'l1', keyword: 'work' }]);
+	assert.deepEqual(bodyOf(calls[0]), {
+		using: LABELS,
+		methodCalls: [['Label/get', { accountId: 'a1', ids: null }, 'l']],
+	});
+	const label = { displayName: 'To do', color: '#00ccdd' };
+	assert.deepEqual(await createLabel(call, account, label), {
+		...label,
+		id: 'l2',
+		keyword: 'todo',
+	});
+	assert.deepEqual(bodyOf(calls[1]).methodCalls, [
+		['Label/set', { accountId: 'a1', create: { label } }, 's'],
+	]);
+});
+
+test('applies a label by setting its keyword on the email', async () => {
+	const { calls, call } = makeCall([
+		answer(['Label/get', { list: [{ id: 'l1', keyword: 'work' }], notFound: [] }, 'l']),
+		answer(
+			['Email/set', { updated: { e1: null } }, 's'],
+			['Email/get', { list: [{ id: 'e1' }] }, 'g'],
+		),
+		answer(['Label/get', { list: [], notFound: ['l9'] }, 'l']),
+	]);
+	assert.deepEqual(await applyLabel(call, account, 'e1', 'l1'), { id: 'e1' });
+	assert.deepEqual(bodyOf(calls[0]).methodCalls, [
+		['Label/get', { accountId: 'a1', ids: ['l1'] }, 'l'],
+	]);
+	assert.deepEqual((bodyOf(calls[1]).methodCalls[0] as [string, { update: unknown }])[1].update, {
+		e1: { 'keywords/work': true },
+	});
+	await assert.rejects(applyLabel(call, account, 'e1', 'l9'), {
+		message: 'No label with the ID l9',
+	});
 });

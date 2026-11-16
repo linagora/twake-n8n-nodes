@@ -518,3 +518,48 @@ export async function deleteEmail(
 	setResult(s, emailId);
 	return { id: emailId, deleted: true };
 }
+
+const LABELS = [...MAIL, 'com:linagora:params:jmap:labels'];
+
+export async function listLabels(call: Request, account: Account): Promise<IDataObject[]> {
+	const { l } = await jmap(
+		call,
+		account,
+		[['Label/get', { accountId: account.accountId, ids: null }, 'l']],
+		LABELS,
+	);
+	return list(l);
+}
+
+export async function createLabel(
+	call: Request,
+	account: Account,
+	label: IDataObject,
+): Promise<IDataObject> {
+	const { s } = await jmap(
+		call,
+		account,
+		[['Label/set', { accountId: account.accountId, create: { label } }, 's']],
+		LABELS,
+	);
+	return { ...label, ...setResult(s, 'label') };
+}
+
+/** Sets the keyword of a label on an email. */
+export async function applyLabel(
+	call: Request,
+	account: Account,
+	emailId: string,
+	labelId: string,
+): Promise<IDataObject> {
+	const { l } = await jmap(
+		call,
+		account,
+		[['Label/get', { accountId: account.accountId, ids: [labelId] }, 'l']],
+		LABELS,
+	);
+	requireFound(l, 'label', labelId);
+	const [label] = list(l);
+	if (!label) throw new Error(`No label with the ID ${labelId}`);
+	return await updateEmail(call, account, emailId, { [`keywords/${String(label.keyword)}`]: true });
+}
