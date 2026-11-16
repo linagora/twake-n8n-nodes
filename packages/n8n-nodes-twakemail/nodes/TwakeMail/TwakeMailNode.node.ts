@@ -13,16 +13,22 @@ import {
 } from 'n8n-workflow';
 
 import {
+	addresses,
+	composeContext,
+	createEmail,
 	downloadUrl,
 	emailFilter,
+	forwardDraft,
 	getAttachments,
 	getEmail,
 	getSession,
 	getThread,
 	listMailboxes,
 	mailAccount,
+	replyDraft,
 	searchEmails,
 	type Account,
+	type Draft,
 	type Request,
 	type SearchFilter,
 } from './jmap';
@@ -44,6 +50,17 @@ const showFor = (resource: string, operation: string[]) => ({
 	show: { resource: [resource], operation },
 });
 
+const COMPOSE = ['send', 'createDraft', 'reply', 'forward'];
+
+const recipients = {
+	displayName: 'To',
+	name: 'to',
+	type: 'string' as const,
+	default: '',
+	placeholder: 'e.g. alice@example.com, Bob <bob@example.com>',
+	description: 'Recipients, separated by commas',
+};
+
 const emailId = {
 	displayName: 'Email ID',
 	name: 'emailId',
@@ -61,7 +78,7 @@ export class TwakeMailNode implements INodeType {
 		version: 1,
 		subtitle: '={{ $parameter["operation"] + ": " + $parameter["resource"] }}',
 		icon: { light: 'file:icon.svg', dark: 'file:icon.svg' },
-		description: 'Read the mail account of a Twake user',
+		description: 'Read and send the emails of a Twake user',
 		defaults: { name: 'Twake Mail' },
 		credentials: [{ name: CREDENTIAL_TYPE, required: true }],
 		inputs: [NodeConnectionTypes.Main],
@@ -89,6 +106,18 @@ export class TwakeMailNode implements INodeType {
 				displayOptions: { show: { resource: ['email'] } },
 				options: [
 					{
+						name: 'Create Draft',
+						value: 'createDraft',
+						description: 'Save an email in Drafts without sending it',
+						action: 'Create a draft',
+					},
+					{
+						name: 'Forward',
+						value: 'forward',
+						description: 'Forward an email with its attachments',
+						action: 'Forward an email',
+					},
+					{
 						name: 'Get',
 						value: 'get',
 						description: 'Get an email with its bodies',
@@ -101,10 +130,22 @@ export class TwakeMailNode implements INodeType {
 						action: 'Get the attachments of an email',
 					},
 					{
+						name: 'Reply',
+						value: 'reply',
+						description: 'Reply to the sender of an email',
+						action: 'Reply to an email',
+					},
+					{
 						name: 'Search',
 						value: 'search',
 						description: 'Search emails, newest first',
 						action: 'Search emails',
+					},
+					{
+						name: 'Send',
+						value: 'send',
+						description: 'Send an email',
+						action: 'Send an email',
 					},
 				],
 			},
@@ -140,7 +181,68 @@ export class TwakeMailNode implements INodeType {
 					},
 				],
 			},
-			{ ...emailId, displayOptions: showFor('email', ['get', 'getAttachments']) },
+			{
+				...emailId,
+				displayOptions: showFor('email', ['get', 'getAttachments', 'reply', 'forward']),
+			},
+			{ ...recipients, required: true, displayOptions: showFor('email', ['send', 'forward']) },
+			{ ...recipients, displayOptions: showFor('email', ['createDraft']) },
+			{
+				displayName: 'Subject',
+				name: 'subject',
+				type: 'string',
+				default: '',
+				displayOptions: showFor('email', ['send', 'createDraft']),
+			},
+			{
+				displayName: 'Email Type',
+				name: 'emailType',
+				type: 'options',
+				default: 'text',
+				options: [
+					{ name: 'Text', value: 'text' },
+					{ name: 'HTML', value: 'html' },
+				],
+				displayOptions: showFor('email', COMPOSE),
+			},
+			{
+				displayName: 'Message',
+				name: 'message',
+				type: 'string',
+				typeOptions: { rows: 5 },
+				default: '',
+				displayOptions: showFor('email', COMPOSE),
+			},
+			{
+				displayName: 'Reply to All',
+				name: 'replyAll',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to also reply to the other recipients of the email',
+				displayOptions: showFor('email', ['reply']),
+			},
+			{
+				displayName: 'Options',
+				name: 'options',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				displayOptions: showFor('email', ['send', 'createDraft', 'forward']),
+				options: [
+					{
+						...recipients,
+						displayName: 'Bcc',
+						name: 'bcc',
+						description: 'Hidden recipients, separated by commas',
+					},
+					{
+						...recipients,
+						displayName: 'Cc',
+						name: 'cc',
+						description: 'Copy recipients, separated by commas',
+					},
+				],
+			},
 			{
 				displayName: 'Download',
 				name: 'download',
@@ -289,7 +391,8 @@ export class TwakeMailNode implements INodeType {
 		for (const [itemIndex] of this.getInputData().entries()) {
 			const pairedItem = { item: itemIndex };
 			try {
-				const param = (name: string) => this.getNodeParameter(name, itemIndex);
+				const param = (name: string, fallback?: unknown) =>
+					this.getNodeParameter(name, itemIndex, fallback);
 				const resource = param('resource') as string;
 				const operation = param('operation') as string;
 				session ??= await getSession(call, baseUrl);
@@ -307,6 +410,38 @@ export class TwakeMailNode implements INodeType {
 					const limit = param('returnAll') ? Infinity : (param('limit') as number);
 					for (const json of await searchEmails(call, account, filter, limit))
 						out.push({ json, pairedItem });
+				} else if (COMPOSE.includes(operation)) {
+					const options = param('options', {}) as IDataObject;
+					const message = {
+						body: param('message') as string,
+						html: param('emailType') === 'html',
+					};
+					const originalId = ['reply', 'forward'].includes(operation)
+						? (param('emailId') as string)
+						: undefined;
+					const context = await composeContext(call, account, originalId);
+					let draft: Draft = {
+						...message,
+						to: addresses(param('to', '') as string),
+						cc: addresses(options.cc as string),
+						bcc: addresses(options.bcc as string),
+						subject: param('subject', '') as string,
+					};
+					const { original: email = {}, identity } = context;
+					if (operation === 'reply') {
+						const all = param('replyAll') as boolean;
+						draft = replyDraft(email, String(identity.email), all, message.body, message.html);
+					} else if (operation === 'forward') {
+						draft = forwardDraft(email, draft);
+					}
+					const json = await createEmail(
+						call,
+						account,
+						context,
+						draft,
+						operation !== 'createDraft',
+					);
+					out.push({ json, pairedItem });
 				} else if (operation === 'get') {
 					out.push({ json: await getEmail(call, account, param('emailId') as string), pairedItem });
 				} else {

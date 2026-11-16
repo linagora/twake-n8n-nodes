@@ -1,6 +1,6 @@
 # n8n-nodes-twakemail
 
-n8n community node to read the mail account of a [Twake Workplace](https://twake.app/) user.
+n8n community node to read and send the emails of a [Twake Workplace](https://twake.app/) user.
 
 ## Operations
 
@@ -9,6 +9,12 @@ n8n community node to read the mail account of a [Twake Workplace](https://twake
 - **Email > Get**: an email with its text and HTML bodies.
 - **Email > Get Attachments**: the attachments of an email, and with **Download** their files as
   binaries `attachment_0`, `attachment_1`…
+- **Email > Send**: an email in text or HTML, to recipients written `alice@example.com` or
+  `Alice <alice@example.com>` and separated by commas. It goes to Sent.
+- **Email > Create Draft**: the same email, saved in Drafts without sending it.
+- **Email > Reply**: to the sender of an email, or with **Reply to All** also to its other recipients,
+  in the same thread.
+- **Email > Forward**: an email with its attachments, the original quoted below the message.
 - **Thread > Get**: the emails of a thread, from the `threadId` of any of them.
 - **Session > Get**: the JMAP session of the connected user: account IDs, capabilities and API URLs.
 
