@@ -18,18 +18,29 @@ Example workflow:
 
 ## Credentials
 
-The node uses the **Twake Chat API** credential: the homeserver URL and a Matrix access token. It
-does not use the Twake SSO login, as the homeserver refuses the SSO token.
+The node uses the **Twake Chat OAuth2 API** credential, which logs in through the Twake SSO. n8n
+trades the id_token of that login for a Matrix access token at Synapse's JWT login
+(`org.matrix.login.jwt`), on a Matrix device named `n8n` with the ID `N8N`. A new login replaces the
+token of that device.
 
-To get an access token:
+1. In the SSO, register a confidential OIDC client for n8n, for example `n8n`, with the
+   `openid profile email offline_access` scopes and the **OAuth Redirect URL** of the credential.
+2. In the Synapse configuration, accept the id_tokens of this client:
 
-1. Open `https://<homeserver>/_matrix/client/v3/login/sso/redirect?redirectUrl=http://localhost`, sign
-   in, and copy the `loginToken` from the URL you land on.
-2. Trade it for an access token and copy the `access_token` of the answer into the credential:
-
-   ```bash
-   curl -X POST https://<homeserver>/_matrix/client/v3/login -H 'Content-Type: application/json' -d '{"type":"m.login.token","token":"<loginToken>"}'
+   ```yaml
+   jwt_config:
+     enabled: true
+     secret: <public signing key of the SSO>
+     algorithm: RS256
+     issuer: https://sign-up.example.com/
+     audiences: [twake-chat-mobile, n8n]
+     subject_claim: preferred_username
    ```
 
-The token acts as your whole Matrix account. To cut access, end that session from the Matrix client or
-call `POST /_matrix/client/v3/logout` with the token.
+   Without the client in `audiences`, Synapse answers `Invalid claim 'aud'`.
+
+3. In the credential, fill in the homeserver URL, the SSO URL, the client ID and secret, and click
+   **Connect**.
+
+To end access, revoke the login at the SSO. Logging out the `n8n` device in Twake Chat only lasts until
+the next request, which logs in again.
