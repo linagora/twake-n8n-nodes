@@ -25,10 +25,25 @@ export function clearMatrixTokenCache(): void {
 	cache.clear();
 }
 
-/** Drops the cached Matrix token of a credential, so the next request logs in again. */
-export function forgetMatrixToken(credentials: ICredentialDataDecryptedObject): void {
+/**
+ * Sends a homeserver request, and once more after a 401 with a new Matrix login: the token was
+ * revoked, or replaced by another login on the n8n device.
+ */
+export async function retryWithNewLogin<T>(
+	credentials: ICredentialDataDecryptedObject,
+	request: () => Promise<T>,
+): Promise<T> {
+	let failure: unknown;
+	try {
+		return await request();
+	} catch (error) {
+		failure = error;
+	}
+	// n8n wraps the answer in a NodeApiError, whose httpCode is a string
+	if ((failure as { httpCode?: string }).httpCode !== '401') throw failure;
 	const refreshToken = (credentials.oauthTokenData as SsoTokenData | undefined)?.refresh_token;
 	if (refreshToken) cache.delete(refreshToken);
+	return await request();
 }
 
 /**
