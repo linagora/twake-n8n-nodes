@@ -53,7 +53,8 @@ The target is n8n verification (D9).
 
 ## Developing
 
-When developing or updating a node, test it on a real browser like Chrome.
+When developing or updating a node, always test it in the user's Chrome (Claude in Chrome), where n8n
+is signed in and the credentials are connected. Do not use a built-in or headless browser instead.
 
 ## Publishing
 
