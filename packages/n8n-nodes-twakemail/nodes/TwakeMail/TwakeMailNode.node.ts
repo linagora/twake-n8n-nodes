@@ -14,8 +14,10 @@ import {
 
 import {
 	addresses,
+	applyLabel,
 	composeContext,
 	createEmail,
+	createLabel,
 	deleteEmail,
 	downloadUrl,
 	emailFilter,
@@ -24,6 +26,7 @@ import {
 	getEmail,
 	getSession,
 	getThread,
+	listLabels,
 	listMailboxes,
 	mailAccount,
 	replyDraft,
@@ -103,6 +106,7 @@ export class TwakeMailNode implements INodeType {
 				default: 'session',
 				options: [
 					{ name: 'Email', value: 'email' },
+					{ name: 'Label', value: 'label' },
 					{ name: 'Session', value: 'session' },
 					{ name: 'Thread', value: 'thread' },
 				],
@@ -200,6 +204,34 @@ export class TwakeMailNode implements INodeType {
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
+				default: 'getAll',
+				displayOptions: { show: { resource: ['label'] } },
+				options: [
+					{
+						name: 'Apply',
+						value: 'apply',
+						description: 'Apply a label to an email',
+						action: 'Apply a label to an email',
+					},
+					{
+						name: 'Create',
+						value: 'create',
+						description: 'Create a label',
+						action: 'Create a label',
+					},
+					{
+						name: 'Get Many',
+						value: 'getAll',
+						description: 'List the labels',
+						action: 'Get many labels',
+					},
+				],
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
 				default: 'get',
 				displayOptions: { show: { resource: ['session'] } },
 				options: [
@@ -257,6 +289,38 @@ export class TwakeMailNode implements INodeType {
 				default: false,
 				description: 'Whether to delete the email for good instead of moving it to Trash',
 				displayOptions: showFor('email', ['delete']),
+			},
+			{ ...emailId, displayOptions: showFor('label', ['apply']) },
+			{
+				displayName: 'Label Name or ID',
+				name: 'labelId',
+				type: 'options',
+				typeOptions: { loadOptionsMethod: 'getLabels' },
+				required: true,
+				default: '',
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				displayOptions: showFor('label', ['apply']),
+			},
+			{
+				displayName: 'Name',
+				name: 'displayName',
+				type: 'string',
+				required: true,
+				default: '',
+				displayOptions: showFor('label', ['create']),
+			},
+			{
+				displayName: 'Options',
+				name: 'labelOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				displayOptions: showFor('label', ['create']),
+				options: [
+					{ displayName: 'Color', name: 'color', type: 'color', default: '' },
+					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
+				],
 			},
 			{ ...recipients, required: true, displayOptions: showFor('email', ['send', 'forward']) },
 			{ ...recipients, displayOptions: showFor('email', ['createDraft']) },
@@ -444,6 +508,14 @@ export class TwakeMailNode implements INodeType {
 
 	methods = {
 		loadOptions: {
+			async getLabels(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const { baseUrl, call } = await connect(this);
+				const account = mailAccount(await getSession(call, baseUrl), baseUrl);
+				return (await listLabels(call, account)).map((label) => ({
+					name: String(label.displayName ?? label.id),
+					value: String(label.id),
+				}));
+			},
 			async getMailboxes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const { baseUrl, call } = await connect(this);
 				const account = mailAccount(await getSession(call, baseUrl), baseUrl);
@@ -475,7 +547,21 @@ export class TwakeMailNode implements INodeType {
 				}
 				account ??= mailAccount(session, baseUrl);
 
-				if (resource === 'thread') {
+				if (resource === 'label') {
+					if (operation === 'getAll') {
+						for (const json of await listLabels(call, account)) out.push({ json, pairedItem });
+					} else if (operation === 'create') {
+						const label = {
+							displayName: param('displayName'),
+							...(param('labelOptions') as IDataObject),
+						};
+						out.push({ json: await createLabel(call, account, label), pairedItem });
+					} else {
+						const id = param('emailId') as string;
+						const json = await applyLabel(call, account, id, param('labelId') as string);
+						out.push({ json, pairedItem });
+					}
+				} else if (resource === 'thread') {
 					for (const json of await getThread(call, account, param('threadId') as string))
 						out.push({ json, pairedItem });
 				} else if (operation === 'search') {

@@ -18,13 +18,17 @@ n8n community node to read and send the emails of a [Twake Workplace](https://tw
 - **Email > Move**: an email to a mailbox, out of the mailboxes it was in.
 - **Email > Mark as Read**, **Mark as Unread**, **Flag** and **Unflag**: an email.
 - **Email > Delete**: an email, moved to Trash, or with **Permanently** deleted for good.
+- **Label > Get Many**: the labels, with the keyword each one sets on emails. Search by **Has
+  Keyword** finds the emails of a label.
+- **Label > Create**: a label, with a color and a description.
+- **Label > Apply**: a label to an email.
 - **Thread > Get**: the emails of a thread, from the `threadId` of any of them.
 - **Session > Get**: the JMAP session of the connected user: account IDs, capabilities and API URLs.
 
 ## Usage
 
-Set up the credential and add the node. Search and Thread > Get output one item per email, the
-other operations one item per input item. Move, Mark, Flag and Delete to Trash output the email as it
+Set up the credential and add the node. Search and Thread > Get output one item per email, Label > Get Many one item per label, the
+other operations one item per input item. Move, Mark, Flag, Delete to Trash and Label > Apply output the email as it
 is after the change.
 
 Example workflow:
