@@ -12,6 +12,7 @@ export interface Account {
 }
 
 export const MAIL = ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'];
+const SUBMISSION = [...MAIL, 'urn:ietf:params:jmap:submission'];
 
 const ACCEPT = { Accept: 'application/json;jmapVersion=rfc-8621' };
 
@@ -108,7 +109,8 @@ export async function jmap(
 			const description = args.description ? `: ${String(args.description)}` : '';
 			throw new Error(`JMAP error ${String(args.type)}${description}`);
 		}
-		results[id] = args;
+		// An implicit call, such as the Email/set of onSuccessUpdateEmail, reuses the ID of its method.
+		results[id] ??= args;
 	}
 	return results;
 }
@@ -119,6 +121,18 @@ const list = (result: IDataObject | undefined) => (result?.list ?? []) as IDataO
 function inOrder(ids: string[], objects: IDataObject[]): IDataObject[] {
 	const byId = new Map(objects.map((object): [unknown, IDataObject] => [object.id, object]));
 	return ids.map((id) => byId.get(id)).filter((object) => object !== undefined);
+}
+
+/** The created object of a /set, or throws the SetError of `id`. */
+function setResult(result: IDataObject | undefined, id: string): IDataObject {
+	for (const failed of ['notCreated', 'notUpdated', 'notDestroyed']) {
+		const error = (result?.[failed] as Record<string, IDataObject> | undefined)?.[id];
+		if (error) {
+			const description = error.description ? `: ${String(error.description)}` : '';
+			throw new Error(`${String(error.type)}${description}`);
+		}
+	}
+	return ((result?.created as Record<string, IDataObject> | undefined)?.[id] ?? {}) as IDataObject;
 }
 
 function requireFound(result: IDataObject, what: string, id: string) {
@@ -256,4 +270,216 @@ export async function listMailboxes(call: Request, account: Account): Promise<ID
 		],
 	]);
 	return list(m);
+}
+
+export type Address = { name?: string | null; email: string };
+
+export interface Draft {
+	to?: Address[];
+	cc?: Address[];
+	bcc?: Address[];
+	subject?: string;
+	body: string;
+	html?: boolean;
+	inReplyTo?: string[] | null;
+	references?: string[] | null;
+	attachments?: Attachment[];
+}
+
+/** Addresses separated by commas, each "alice@example.com" or "Alice <alice@example.com>". */
+export function addresses(value = ''): Address[] {
+	return value
+		.split(',')
+		.map((part) => part.trim())
+		.filter(Boolean)
+		.map((part) => {
+			const match = /^(.*)<([^>]+)>$/.exec(part);
+			return match
+				? { name: match[1].trim().replace(/^"|"$/g, '') || null, email: match[2].trim() }
+				: { email: part };
+		});
+}
+
+const prefixed = (prefix: string, subject: unknown) => {
+	const text = String(subject ?? '');
+	return new RegExp(`^${prefix}:`, 'i').test(text) ? text : `${prefix}: ${text}`;
+};
+
+const escapeHtml = (text: string) =>
+	text.replace(/[&<>"]/g, (char) => `&${{ '&': 'amp', '<': 'lt', '>': 'gt', '"': 'quot' }[char]};`);
+
+const sameEmail = (a: Address, b: Address) => a.email.toLowerCase() === b.email.toLowerCase();
+
+const REPLY_PROPERTIES = ['from', 'to', 'cc', 'replyTo', 'subject', 'messageId', 'references'];
+
+/** The draft of a reply, to the reply-to or sender address, and with `all` to the other recipients. */
+export function replyDraft(
+	original: IDataObject,
+	me: string,
+	all: boolean,
+	body: string,
+	html = false,
+): Draft {
+	const replyTo = original.replyTo as Address[] | null;
+	const to = replyTo?.length ? replyTo : ((original.from ?? []) as Address[]);
+	const others = [...((original.to ?? []) as Address[]), ...((original.cc ?? []) as Address[])];
+	const cc = all
+		? others.filter(
+				(address, index) =>
+					!sameEmail(address, { email: me }) &&
+					!to.some((other) => sameEmail(other, address)) &&
+					others.findIndex((other) => sameEmail(other, address)) === index,
+			)
+		: [];
+	const messageId = original.messageId as string[] | null;
+	return {
+		to,
+		cc,
+		subject: prefixed('Re', original.subject),
+		body,
+		html,
+		inReplyTo: messageId,
+		references: [...((original.references ?? []) as string[]), ...(messageId ?? [])],
+	};
+}
+
+const addressList = (addresses: unknown) =>
+	((addresses ?? []) as Address[])
+		.map((address) => (address.name ? `${address.name} <${address.email}>` : address.email))
+		.join(', ');
+
+/** The draft of a forward: the message, then the original email in HTML, with its attachments. */
+export function forwardDraft(original: IDataObject, draft: Draft): Draft {
+	const values = (original.bodyValues ?? {}) as Record<string, { value: string }>;
+	const parts = (body: unknown) =>
+		((body ?? []) as Array<{ partId: string; type: string }>).map((part) => ({
+			...part,
+			value: values[part.partId]?.value ?? '',
+		}));
+	const html = parts(original.htmlBody).filter((part) => part.type === 'text/html');
+	const quoted = html.length
+		? html.map((part) => part.value).join('')
+		: escapeHtml(
+				parts(original.textBody)
+					.map((part) => part.value)
+					.join('\n'),
+			).replace(/\n/g, '<br>');
+	const header = [
+		'---------- Forwarded message ----------',
+		`From: ${addressList(original.from)}`,
+		`Date: ${String(original.sentAt ?? original.receivedAt ?? '')}`,
+		`Subject: ${String(original.subject ?? '')}`,
+		`To: ${addressList(original.to)}`,
+		...(original.cc && (original.cc as Address[]).length
+			? [`Cc: ${addressList(original.cc)}`]
+			: []),
+	]
+		.map(escapeHtml)
+		.join('<br>');
+	const message = draft.html ? draft.body : escapeHtml(draft.body).replace(/\n/g, '<br>');
+	return {
+		...draft,
+		subject: prefixed('Fwd', original.subject),
+		body: `<div>${message}</div><br><div>${header}<br><br>${quoted}</div>`,
+		html: true,
+		attachments: (original.attachments ?? []) as Attachment[],
+	};
+}
+
+/** The identity, the Drafts and Sent mailboxes, and the email `emailId` if given. */
+export async function composeContext(call: Request, account: Account, emailId?: string) {
+	const { accountId } = account;
+	const methodCalls: MethodCall[] = [
+		['Identity/get', { accountId, ids: null }, 'i'],
+		['Mailbox/get', { accountId, ids: null, properties: ['id', 'role'] }, 'm'],
+	];
+	if (emailId) {
+		methodCalls.push([
+			'Email/get',
+			{
+				accountId,
+				ids: [emailId],
+				properties: [
+					...REPLY_PROPERTIES,
+					'sentAt',
+					'receivedAt',
+					'textBody',
+					'htmlBody',
+					'bodyValues',
+					'attachments',
+				],
+				fetchTextBodyValues: true,
+				fetchHTMLBodyValues: true,
+			},
+			'e',
+		]);
+	}
+	const { i, m, e } = await jmap(call, account, methodCalls, SUBMISSION);
+	const [identity] = list(i);
+	if (!identity) throw new Error('The account has no identity to send from');
+	const role = (name: string) => list(m).find((mailbox) => mailbox.role === name)?.id as string;
+	if (!role('drafts')) throw new Error('The account has no Drafts mailbox');
+	let original: IDataObject | undefined;
+	if (emailId) {
+		requireFound(e, 'email', emailId);
+		original = list(e)[0];
+		if (!original) throw new Error(`No email with the ID ${emailId}`);
+	}
+	return { identity, drafts: role('drafts'), sent: role('sent'), original };
+}
+
+/** Saves a draft in Drafts, and with `send` submits it and moves it to Sent. */
+export async function createEmail(
+	call: Request,
+	account: Account,
+	context: { identity: IDataObject; drafts: string; sent?: string },
+	draft: Draft,
+	send: boolean,
+): Promise<IDataObject> {
+	const { accountId } = account;
+	const { identity, drafts, sent } = context;
+	const email: IDataObject = {
+		mailboxIds: { [drafts]: true },
+		keywords: { $draft: true, $seen: true },
+		from: [{ name: identity.name || null, email: identity.email }],
+		subject: draft.subject ?? '',
+		bodyValues: { body: { value: draft.body } },
+		[draft.html ? 'htmlBody' : 'textBody']: [
+			{ partId: 'body', type: draft.html ? 'text/html' : 'text/plain' },
+		],
+	};
+	for (const key of ['to', 'cc', 'bcc', 'inReplyTo', 'references'] as const) {
+		const value = draft[key];
+		if (value?.length) email[key] = value;
+	}
+	if (draft.attachments?.length) {
+		email.attachments = draft.attachments.map(({ blobId, name, type }) => ({
+			blobId,
+			name,
+			type,
+			disposition: 'attachment',
+		}));
+	}
+	const methodCalls: MethodCall[] = [['Email/set', { accountId, create: { draft: email } }, 's']];
+	if (send) {
+		methodCalls.push([
+			'EmailSubmission/set',
+			{
+				accountId,
+				create: { send: { identityId: identity.id, emailId: '#draft' } },
+				onSuccessUpdateEmail: {
+					'#send': {
+						[`mailboxIds/${drafts}`]: null,
+						...(sent ? { [`mailboxIds/${sent}`]: true } : {}),
+						'keywords/$draft': null,
+					},
+				},
+			},
+			'u',
+		]);
+	}
+	const { s, u } = await jmap(call, account, methodCalls, SUBMISSION);
+	const created = setResult(s, 'draft');
+	if (!send) return created;
+	return { ...created, submissionId: setResult(u, 'send').id };
 }
