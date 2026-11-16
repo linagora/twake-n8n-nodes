@@ -29,9 +29,12 @@ import {
 	getThread,
 	listLabels,
 	listMailboxes,
+	listTeamMailboxes,
 	mailAccount,
 	replyDraft,
+	revokeTeamMailboxAccess,
 	searchEmails,
+	setTeamMailboxMember,
 	updateEmail,
 	type Account,
 	type Answer,
@@ -110,6 +113,7 @@ export class TwakeMailNode implements INodeType {
 					{ name: 'Email', value: 'email' },
 					{ name: 'Label', value: 'label' },
 					{ name: 'Session', value: 'session' },
+					{ name: 'Team Mailbox', value: 'teamMailbox' },
 					{ name: 'Thread', value: 'thread' },
 				],
 			},
@@ -256,6 +260,40 @@ export class TwakeMailNode implements INodeType {
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
+				default: 'getAll',
+				displayOptions: { show: { resource: ['teamMailbox'] } },
+				options: [
+					{
+						name: 'Add Member',
+						value: 'addMember',
+						description: 'Add a member to a team mailbox, or change their role',
+						action: 'Add a member to a team mailbox',
+					},
+					{
+						name: 'Get Many',
+						value: 'getAll',
+						description: 'List my team mailboxes with their members',
+						action: 'Get many team mailboxes',
+					},
+					{
+						name: 'Remove Member',
+						value: 'removeMember',
+						description: 'Remove a member from a team mailbox',
+						action: 'Remove a member from a team mailbox',
+					},
+					{
+						name: 'Revoke Access',
+						value: 'revokeAccess',
+						description: 'Leave a team mailbox',
+						action: 'Revoke my access to a team mailbox',
+					},
+				],
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
 				default: 'get',
 				displayOptions: { show: { resource: ['thread'] } },
 				options: [
@@ -351,6 +389,43 @@ export class TwakeMailNode implements INodeType {
 					{ displayName: 'Color', name: 'color', type: 'color', default: '' },
 					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
 				],
+			},
+			{
+				displayName: 'Team Mailbox Name or ID',
+				name: 'teamMailbox',
+				type: 'options',
+				typeOptions: { loadOptionsMethod: 'getTeamMailboxes' },
+				required: true,
+				default: '',
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				hint: 'The ID of a team mailbox is its address',
+				displayOptions: showFor('teamMailbox', ['addMember', 'removeMember', 'revokeAccess']),
+			},
+			{
+				displayName: 'User',
+				name: 'user',
+				type: 'string',
+				required: true,
+				default: '',
+				placeholder: 'e.g. alice@example.com',
+				description: 'Address of the member',
+				displayOptions: showFor('teamMailbox', ['addMember', 'removeMember']),
+			},
+			{
+				displayName: 'Role',
+				name: 'role',
+				type: 'options',
+				default: 'member',
+				options: [
+					{
+						name: 'Member',
+						value: 'member',
+						description: 'Reads and sends the emails of the team',
+					},
+					{ name: 'Manager', value: 'manager', description: 'Also manages the members' },
+				],
+				displayOptions: showFor('teamMailbox', ['addMember']),
 			},
 			{ ...recipients, required: true, displayOptions: showFor('email', ['send', 'forward']) },
 			{ ...recipients, displayOptions: showFor('email', ['createDraft']) },
@@ -538,6 +613,14 @@ export class TwakeMailNode implements INodeType {
 
 	methods = {
 		loadOptions: {
+			async getTeamMailboxes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const { baseUrl, call } = await connect(this);
+				const account = mailAccount(await getSession(call, baseUrl), baseUrl);
+				return (await listTeamMailboxes(call, account)).map((teamMailbox) => ({
+					name: String(teamMailbox.id),
+					value: String(teamMailbox.id),
+				}));
+			},
 			async getLabels(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const { baseUrl, call } = await connect(this);
 				const account = mailAccount(await getSession(call, baseUrl), baseUrl);
@@ -577,7 +660,25 @@ export class TwakeMailNode implements INodeType {
 				}
 				account ??= mailAccount(session, baseUrl);
 
-				if (resource === 'label') {
+				if (resource === 'teamMailbox') {
+					if (operation === 'getAll') {
+						for (const json of await listTeamMailboxes(call, account))
+							out.push({ json, pairedItem });
+						continue;
+					}
+					const teamMailbox = param('teamMailbox') as string;
+					const json =
+						operation === 'revokeAccess'
+							? await revokeTeamMailboxAccess(call, account, teamMailbox)
+							: await setTeamMailboxMember(
+									call,
+									account,
+									teamMailbox,
+									param('user') as string,
+									operation === 'addMember' ? (param('role') as 'member' | 'manager') : null,
+								);
+					out.push({ json, pairedItem });
+				} else if (resource === 'label') {
 					if (operation === 'getAll') {
 						for (const json of await listLabels(call, account)) out.push({ json, pairedItem });
 					} else if (operation === 'create') {

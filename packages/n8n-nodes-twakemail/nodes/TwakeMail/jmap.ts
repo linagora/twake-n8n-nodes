@@ -615,3 +615,63 @@ export async function answerInvitation(
 	if ((r.notFound as string[] | null)?.length) throw new Error('The invitation was not found');
 	return r;
 }
+
+const TEAM_MAILBOXES = [...MAIL, 'com:linagora:params:jmap:team:mailboxes'];
+
+/** The team mailboxes of the user, with their members and roles. */
+export async function listTeamMailboxes(call: Request, account: Account): Promise<IDataObject[]> {
+	const { t } = await jmap(
+		call,
+		account,
+		[['TeamMailboxMember/get', { accountId: account.accountId, ids: null }, 't']],
+		TEAM_MAILBOXES,
+	);
+	return list(t);
+}
+
+/** Adds a member to a team mailbox or changes their role, or with a null role removes them. */
+export async function setTeamMailboxMember(
+	call: Request,
+	account: Account,
+	teamMailbox: string,
+	user: string,
+	role: 'member' | 'manager' | null,
+): Promise<IDataObject> {
+	const { accountId } = account;
+	const { s, t } = await jmap(
+		call,
+		account,
+		[
+			[
+				'TeamMailboxMember/set',
+				{ accountId, update: { [teamMailbox]: { [`members/${user}`]: role && { role } } } },
+				's',
+			],
+			['TeamMailboxMember/get', { accountId, ids: [teamMailbox] }, 't'],
+		],
+		TEAM_MAILBOXES,
+	);
+	setResult(s, teamMailbox);
+	return list(t)[0] ?? { id: teamMailbox };
+}
+
+/** Removes the access of the user to a team mailbox. */
+export async function revokeTeamMailboxAccess(
+	call: Request,
+	account: Account,
+	teamMailbox: string,
+): Promise<IDataObject> {
+	const { r } = await jmap(
+		call,
+		account,
+		[['TeamMailbox/revokeAccess', { accountId: account.accountId, ids: [teamMailbox] }, 'r']],
+		TEAM_MAILBOXES,
+	);
+	// The server answers a map of SetErrors, not the array of its documentation.
+	const error = (r.notRevoked as Record<string, IDataObject> | null | undefined)?.[teamMailbox];
+	if (error) {
+		const description = error.description ? `: ${String(error.description)}` : '';
+		throw new Error(`${String(error.type)}${description}`);
+	}
+	return r;
+}
