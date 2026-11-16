@@ -14,6 +14,7 @@ import {
 
 import {
 	addresses,
+	answerInvitation,
 	applyLabel,
 	composeContext,
 	createEmail,
@@ -33,6 +34,7 @@ import {
 	searchEmails,
 	updateEmail,
 	type Account,
+	type Answer,
 	type Draft,
 	type Request,
 	type SearchFilter,
@@ -119,6 +121,12 @@ export class TwakeMailNode implements INodeType {
 				default: 'search',
 				displayOptions: { show: { resource: ['email'] } },
 				options: [
+					{
+						name: 'Answer Invitation',
+						value: 'answerInvitation',
+						description: 'Accept, decline or maybe accept the invitation of an email',
+						action: 'Answer an invitation',
+					},
 					{
 						name: 'Create Draft',
 						value: 'createDraft',
@@ -268,6 +276,7 @@ export class TwakeMailNode implements INodeType {
 					'forward',
 					'move',
 					'delete',
+					'answerInvitation',
 					...Object.keys(KEYWORD_PATCHES),
 				]),
 			},
@@ -281,6 +290,27 @@ export class TwakeMailNode implements INodeType {
 				description:
 					'Mailbox to move the email to. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 				displayOptions: showFor('email', ['move']),
+			},
+			{
+				displayName: 'Answer',
+				name: 'answer',
+				type: 'options',
+				default: 'accept',
+				options: [
+					{ name: 'Accept', value: 'accept' },
+					{ name: 'Decline', value: 'reject' },
+					{ name: 'Maybe', value: 'maybe' },
+				],
+				displayOptions: showFor('email', ['answerInvitation']),
+			},
+			{
+				displayName: 'Language',
+				name: 'language',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. fr',
+				description: 'Language of the email sent to the organizer, English by default',
+				displayOptions: showFor('email', ['answerInvitation']),
 			},
 			{
 				displayName: 'Permanently',
@@ -575,6 +605,17 @@ export class TwakeMailNode implements INodeType {
 						mailboxIds: { [param('mailboxId') as string]: true },
 					};
 					out.push({ json: await updateEmail(call, account, id, patch), pairedItem });
+				} else if (operation === 'answerInvitation') {
+					const id = param('emailId') as string;
+					const answer = param('answer') as Answer;
+					const json = await answerInvitation(
+						call,
+						account,
+						id,
+						answer,
+						param('language') as string,
+					);
+					out.push({ json, pairedItem });
 				} else if (operation === 'delete') {
 					const id = param('emailId') as string;
 					const json = await deleteEmail(call, account, id, param('permanently') as boolean);

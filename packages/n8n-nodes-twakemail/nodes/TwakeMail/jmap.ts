@@ -563,3 +563,55 @@ export async function applyLabel(
 	if (!label) throw new Error(`No label with the ID ${labelId}`);
 	return await updateEmail(call, account, emailId, { [`keywords/${String(label.keyword)}`]: true });
 }
+
+const CALENDAR_EVENT = [MAIL[0], 'com:linagora:params:calendar:event'];
+
+export type Answer = 'accept' | 'reject' | 'maybe';
+
+const FAILED: Record<Answer, string> = {
+	accept: 'notAccepted',
+	reject: 'notRejected',
+	maybe: 'notMaybe',
+};
+
+/** The blobs of the invitations of an email: its .ics files, else its text/calendar ones, as Twake Mail does. */
+export function invitationBlobIds(attachments: Attachment[]): string[] {
+	const of = (subtype: string) =>
+		attachments
+			.filter((attachment) => attachment.type?.toLowerCase().endsWith(`/${subtype}`))
+			.map((attachment) => attachment.blobId);
+	const ics = of('ics');
+	return ics.length ? ics : of('calendar');
+}
+
+/** Answers the invitation of an email. The server records the answer and emails the organizer. */
+export async function answerInvitation(
+	call: Request,
+	account: Account,
+	emailId: string,
+	answer: Answer,
+	language?: string,
+): Promise<IDataObject> {
+	const blobIds = invitationBlobIds(await getAttachments(call, account, emailId));
+	if (!blobIds.length) throw new Error(`The email ${emailId} has no invitation`);
+	const { r } = await jmap(
+		call,
+		account,
+		[
+			[
+				`CalendarEvent/${answer}`,
+				{ accountId: account.accountId, blobIds, ...(language ? { language } : {}) },
+				'r',
+			],
+		],
+		CALENDAR_EVENT,
+	);
+	const failures = Object.values((r[FAILED[answer]] ?? {}) as Record<string, IDataObject>);
+	if (failures.length) {
+		const [error] = failures;
+		const description = error.description ? `: ${String(error.description)}` : '';
+		throw new Error(`${String(error.type)}${description}`);
+	}
+	if ((r.notFound as string[] | null)?.length) throw new Error('The invitation was not found');
+	return r;
+}

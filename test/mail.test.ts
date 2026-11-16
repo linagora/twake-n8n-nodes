@@ -7,6 +7,7 @@ import {
 	EMAIL_PROPERTIES,
 	MAIL,
 	addresses,
+	answerInvitation,
 	applyLabel,
 	composeContext,
 	createEmail,
@@ -18,6 +19,7 @@ import {
 	getAttachments,
 	getEmail,
 	getThread,
+	invitationBlobIds,
 	jmap,
 	listLabels,
 	mailAccount,
@@ -450,5 +452,57 @@ test('applies a label by setting its keyword on the email', async () => {
 	});
 	await assert.rejects(applyLabel(call, account, 'e1', 'l9'), {
 		message: 'No label with the ID l9',
+	});
+});
+
+test('picks the .ics files of an email as invitations, else its text/calendar ones', () => {
+	const file = (blobId: string, type: string) => ({ blobId, type });
+	assert.deepEqual(
+		invitationBlobIds([
+			file('b1', 'text/calendar'),
+			file('b2', 'application/ICS'),
+			file('b3', 'image/png'),
+		]),
+		['b2'],
+	);
+	assert.deepEqual(invitationBlobIds([file('b1', 'text/calendar')]), ['b1']);
+});
+
+test('answers the invitation of an email, and throws when the server cannot', async () => {
+	const invitation = answer([
+		'Email/get',
+		{ list: [{ id: 'e1', attachments: [{ blobId: 'b1', type: 'text/calendar' }] }] },
+		'g',
+	]);
+	const { calls, call } = makeCall([
+		invitation,
+		answer(['CalendarEvent/reject', { accountId: 'a1', rejected: ['b1'] }, 'r']),
+		invitation,
+		answer([
+			'CalendarEvent/maybe',
+			{ notMaybe: { b1: { type: 'eventNotFound', description: 'Gone' } } },
+			'r',
+		]),
+		answer(['Email/get', { list: [{ id: 'e2', attachments: [] }] }, 'g']),
+	]);
+	assert.deepEqual(await answerInvitation(call, account, 'e1', 'reject', 'fr'), {
+		accountId: 'a1',
+		rejected: ['b1'],
+	});
+	assert.deepEqual(bodyOf(calls[1]), {
+		using: ['urn:ietf:params:jmap:core', 'com:linagora:params:calendar:event'],
+		methodCalls: [
+			['CalendarEvent/reject', { accountId: 'a1', blobIds: ['b1'], language: 'fr' }, 'r'],
+		],
+	});
+	await assert.rejects(answerInvitation(call, account, 'e1', 'maybe'), {
+		message: 'eventNotFound: Gone',
+	});
+	assert.deepEqual((bodyOf(calls[3]).methodCalls[0] as [string, object])[1], {
+		accountId: 'a1',
+		blobIds: ['b1'],
+	});
+	await assert.rejects(answerInvitation(call, account, 'e2', 'accept'), {
+		message: 'The email e2 has no invitation',
 	});
 });
