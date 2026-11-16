@@ -47,6 +47,7 @@ The target is n8n verification (D9).
 - No runtime dependencies, and no access to the environment or to files.
 - Follow n8n's [UX guidelines](https://docs.n8n.io/connect/create-nodes/build-your-node/reference/ux-guidelines).
   User-facing text is in English.
+- No permanent delete: a delete moves to the trash of the app (D16).
 - A change that breaks existing nodes or credentials goes in the version history of the package README.
 - `stackToken.ts` is copied into each cozy-stack package, as packages cannot depend on each other. The
   copies stay identical.
