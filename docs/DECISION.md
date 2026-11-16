@@ -135,4 +135,5 @@ trades it for a Matrix token on a fixed `N8N` device. See
 [AUTHENTICATION.md](AUTHENTICATION.md#login-to-matrix).
 
 Each Synapse must list the n8n SSO client in `jwt_config.audiences`. To end access, revoke the login at
-the SSO: logging out the Matrix device only lasts until the next login.
+the SSO, which ends the cached Matrix token within the hour, then log out the Matrix device, which ends
+that token at the homeserver. Logging out the device alone only lasts until the next login.

@@ -11,21 +11,36 @@ import {
 	type JsonObject,
 } from 'n8n-workflow';
 
+import { forgetMatrixToken } from '../../credentials/matrixToken';
 import { editMessage, react, sendFile, sendMessage, type Request } from './messages';
 
 const CREDENTIAL_TYPE = 'twakeChatOAuth2Api';
 
 async function caller(context: IExecuteFunctions): Promise<Request> {
-	const { apiUrl: homeserverUrl } = await context.getCredentials<{ apiUrl: string }>(
-		CREDENTIAL_TYPE,
-	);
-	const baseUrl = `${homeserverUrl.replace(/\/+$/, '')}/_matrix`;
-	return async (options) =>
-		await context.helpers.httpRequestWithAuthentication.call(context, CREDENTIAL_TYPE, {
-			json: true,
-			...options,
-			url: `${baseUrl}${options.url}`,
-		});
+	const credentials = await context.getCredentials(CREDENTIAL_TYPE);
+	const baseUrl = `${String(credentials.apiUrl).replace(/\/+$/, '')}/_matrix`;
+	const request: Request = async (options) =>
+		await context.helpers.httpRequestWithAuthentication.call(
+			context,
+			CREDENTIAL_TYPE,
+			{ json: true, ...options, url: `${baseUrl}${options.url}` },
+			// On a 401, n8n would retry with the stored SSO token, which must not reach the homeserver
+			{ oauth2: { skipTokenRefresh: true } },
+		);
+	return async (options) => {
+		try {
+			return await request(options);
+		} catch (error) {
+			// The Matrix token was revoked, or replaced by another login on the n8n device
+			if ((error as { httpCode?: string }).httpCode === '401') {
+				forgetMatrixToken(credentials);
+				return await request(options);
+			}
+			throw error instanceof NodeApiError
+				? error
+				: new NodeApiError(context.getNode(), error as JsonObject);
+		}
+	};
 }
 
 const showFor = (operation: string[]) => ({ show: { resource: ['message'], operation } });

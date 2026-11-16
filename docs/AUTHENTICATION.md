@@ -91,16 +91,21 @@ Synapse refuses the SSO access token, and accepts an id_token at
 `POST /_matrix/client/v3/login` with `{ type: 'org.matrix.login.jwt', token }` when its `jwt_config`
 lists the client in `audiences`. The credential runs `loginToMatrix` as its `preAuthentication`:
 
-1. Look in a cache keyed by the refresh token, per n8n process. The cached Matrix token is used while
-   n8n holds the same id_token.
+1. Look in a cache keyed by the refresh token, for one hour and per n8n process.
 2. Refresh at the SSO to get a fresh `id_token`, as Synapse refuses an expired one.
 3. Log in with it on the device `N8N`. Reusing the device ID replaces the token of that device, so
    logins do not pile up devices.
-4. Use the returned Matrix token for the request. The node lets n8n refresh on a 401: the refresh
-   changes the id_token, so a revoked Matrix token leads to a new login.
+4. Use the returned Matrix token for the request. n8n does not save it, and the node sets
+   `oauth2: { skipTokenRefresh: true }`: on a 401, n8n would retry with the stored SSO access token,
+   which must not reach the homeserver.
 
-Matrix tokens issued this way do not expire. Two n8n processes or two credentials of one user replace
-each other's token, and each recovers with one more login after a 401.
+On a 401, the node drops the cached Matrix token and retries the request once, which logs in again.
+That covers a token revoked by logging out the `N8N` device, and two n8n processes or two credentials
+of one user, which replace each other's token.
+
+Matrix tokens issued this way do not expire. To end access, revoke the login at the SSO, which stops
+new logins and ends the cached token within the hour, then log out the `N8N` device, which ends the
+last token at the homeserver.
 
 ## Lifetimes
 
@@ -112,6 +117,7 @@ each other's token, and each recovers with one more login after a 401.
 | Stack access token                   | 7 days                        | cozy-stack code        |
 | Stack token cached by the node       | 1 hour                        | `stackToken.ts`        |
 | Matrix token from the JWT login      | No expiry, until replaced     | Synapse                |
+| Matrix token cached by the node      | 1 hour                        | `matrixToken.ts`       |
 
 ## Scope of the tokens
 
