@@ -5,6 +5,7 @@ import type { IHttpRequestOptions } from 'n8n-workflow';
 
 import {
 	clearMatrixTokenCache,
+	forgetMatrixToken,
 	loginToMatrix,
 } from '../packages/n8n-nodes-twakechat/credentials/matrixToken.ts';
 
@@ -53,25 +54,34 @@ test('refreshes at the SSO, then logs in to Matrix with the id_token on the n8n 
 	});
 });
 
-test('reuses the Matrix token until n8n holds another id_token', async () => {
+test('reuses the Matrix token for an hour, or until it is forgotten', async (t) => {
+	t.mock.timers.enable({ apis: ['Date'], now: 0 });
 	const { calls, helper } = makeHelper([
 		{ id_token: 'fresh' },
 		{ access_token: 'matrix' },
-		{ id_token: 'fresher' },
+		{ id_token: 'fresh' },
 		{ access_token: 'matrix2' },
+		{ id_token: 'fresh' },
+		{ access_token: 'matrix3' },
 	]);
-	await loginToMatrix.call(helper as never, credentials);
-	const again = await loginToMatrix.call(helper as never, credentials);
-	assert.equal(calls.length, 2);
-	assert.equal((again.oauthTokenData as { access_token: string }).access_token, 'matrix');
+	const token = async () =>
+		(
+			(await loginToMatrix.call(helper as never, credentials)).oauthTokenData as {
+				access_token: string;
+			}
+		).access_token;
 
-	// After a 401, n8n refreshes the SSO login itself and calls again with the new id_token.
-	const afterRefresh = await loginToMatrix.call(helper as never, {
-		...credentials,
-		oauthTokenData: { ...credentials.oauthTokenData, id_token: 'refreshed-by-n8n' },
-	});
-	assert.equal(calls.length, 4);
-	assert.equal((afterRefresh.oauthTokenData as { access_token: string }).access_token, 'matrix2');
+	assert.equal(await token(), 'matrix');
+	assert.equal(await token(), 'matrix');
+	assert.equal(calls.length, 2);
+
+	// The node forgets the token when the homeserver answers 401.
+	forgetMatrixToken(credentials);
+	assert.equal(await token(), 'matrix2');
+
+	t.mock.timers.tick(60 * 60 * 1000);
+	assert.equal(await token(), 'matrix3');
+	assert.equal(calls.length, 6);
 });
 
 test('says which side refused', async () => {

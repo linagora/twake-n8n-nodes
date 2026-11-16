@@ -10,9 +10,11 @@ interface SsoTokenData extends IDataObject {
 // and each recovers on its next 401 with one more login.
 const DEVICE_ID = 'N8N';
 
-// Per process, keyed by refresh token. The cached token stays while n8n holds the same id_token:
-// n8n refreshes the SSO login on a 401, which changes it, so a revoked Matrix token leads to a new login.
-const cache = new Map<string, { idToken: string; accessToken: string }>();
+// Matrix tokens don't expire, this bounds how long one is used after the SSO login is revoked.
+const CACHE_DURATION_MS = 60 * 60 * 1000;
+
+// Per-process cache keyed by refresh token, so each queue worker logs in on its own.
+const cache = new Map<string, { accessToken: string; expiresAt: number }>();
 
 // A credential has no node to build a NodeApiError with.
 function refusal(message: string, cause: unknown): Error {
@@ -21,6 +23,12 @@ function refusal(message: string, cause: unknown): Error {
 
 export function clearMatrixTokenCache(): void {
 	cache.clear();
+}
+
+/** Drops the cached Matrix token of a credential, so the next request logs in again. */
+export function forgetMatrixToken(credentials: ICredentialDataDecryptedObject): void {
+	const refreshToken = (credentials.oauthTokenData as SsoTokenData | undefined)?.refresh_token;
+	if (refreshToken) cache.delete(refreshToken);
 }
 
 /**
@@ -37,9 +45,8 @@ export async function loginToMatrix(
 		throw new Error('This credential has no refresh token, connect it again');
 	}
 
-	const idToken = tokenData.id_token ?? '';
 	const cached = cache.get(refreshToken);
-	if (cached?.idToken === idToken) {
+	if (cached && cached.expiresAt > Date.now()) {
 		return { oauthTokenData: { ...tokenData, access_token: cached.accessToken } };
 	}
 
@@ -94,6 +101,9 @@ export async function loginToMatrix(
 		throw new Error('The homeserver did not return an access token');
 	}
 
-	cache.set(refreshToken, { idToken, accessToken: login.access_token });
+	cache.set(refreshToken, {
+		accessToken: login.access_token,
+		expiresAt: Date.now() + CACHE_DURATION_MS,
+	});
 	return { oauthTokenData: { ...tokenData, access_token: login.access_token } };
 }

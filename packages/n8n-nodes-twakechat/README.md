@@ -55,5 +55,7 @@ token of that device.
 3. In the credential, fill in the homeserver URL, the SSO URL, the client ID and secret, and click
    **Connect**.
 
-To end access, revoke the login at the SSO. Logging out the `n8n` device in Twake Chat only lasts until
-the next request, which logs in again.
+To end access, revoke the login at the SSO, then log out the `n8n` device in Twake Chat. The node
+keeps using its Matrix token for up to an hour after the revocation, and the token stays valid at the
+homeserver until that logout. Logging out the device alone only lasts until the next request, which
+logs in again.
