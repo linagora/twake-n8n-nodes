@@ -8,6 +8,7 @@ import {
 	createEvent,
 	createVideoConference,
 	deleteEvent,
+	getFreeBusy,
 	toUtc,
 	updateEvent,
 	videoConferenceFailure,
@@ -224,4 +225,69 @@ test('explains the empty 404 and 502 answers of the video conference route', () 
 	assert.match(videoConferenceFailure({ httpCode: '404' }) ?? '', /not enabled/);
 	assert.match(videoConferenceFailure({ response: { status: 502 } }) ?? '', /cannot be reached/);
 	assert.equal(videoConferenceFailure({ httpCode: '500' }), undefined);
+});
+
+test('gets the busy periods of users, found by their email', async () => {
+	const { calls, call } = makeCall([
+		[{ _id: 'u2' }],
+		[{ _id: 'u3' }],
+		{
+			users: [
+				{
+					id: 'u2',
+					calendars: [
+						{ id: 'c1', busy: [{ uid: 'e2', start: '20261119T140000Z', end: '20261119T150000Z' }] },
+						{ id: 'c2', busy: [{ uid: 'e1', start: '20261119T080000Z', end: '20261119T090000Z' }] },
+					],
+				},
+				{ id: 'u3', calendars: [{ id: 'c1', busy: [] }] },
+			],
+		},
+	]);
+	const output = await getFreeBusy(
+		call,
+		'bob@test, Bob@test,carol@test',
+		'2026-11-19T09:00:00',
+		'2026-11-19T18:00:00',
+		'Europe/Paris',
+	);
+
+	assert.deepEqual(calls, [
+		{ method: 'GET', url: '/api/users', qs: { email: 'bob@test' } },
+		{ method: 'GET', url: '/api/users', qs: { email: 'carol@test' } },
+		{
+			method: 'POST',
+			url: '/dav/calendars/freebusy',
+			headers: { Accept: 'application/json' },
+			body: {
+				start: '2026-11-19T08:00:00Z',
+				end: '2026-11-19T17:00:00Z',
+				timezone: 'Europe/Paris',
+				users: ['u2', 'u3'],
+			},
+		},
+	]);
+	assert.deepEqual(output, [
+		{
+			email: 'bob@test',
+			userId: 'u2',
+			available: false,
+			busy: [
+				{ start: '2026-11-19T08:00:00Z', end: '2026-11-19T09:00:00Z' },
+				{ start: '2026-11-19T14:00:00Z', end: '2026-11-19T15:00:00Z' },
+			],
+		},
+		{ email: 'carol@test', userId: 'u3', available: true, busy: [] },
+	]);
+});
+
+test('names the email that has no user, and refuses an end before the start', async () => {
+	await assert.rejects(
+		getFreeBusy(makeCall([[]]).call, 'nobody@test', '2026-11-19', '2026-11-20', 'UTC'),
+		/No Twake user has the email nobody@test/,
+	);
+	await assert.rejects(
+		getFreeBusy(makeCall([]).call, 'bob@test', '2026-11-20', '2026-11-19', 'UTC'),
+		/end is before the start/,
+	);
 });

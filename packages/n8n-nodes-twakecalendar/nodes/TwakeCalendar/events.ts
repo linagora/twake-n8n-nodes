@@ -334,6 +334,60 @@ export async function deleteEvent(
 	return { deleted: true, uid };
 }
 
+/** `20261120T150000Z`, as the free/busy service writes dates, to `2026-11-20T15:00:00Z`. */
+const isoDate = (value: string) =>
+	value.replace(/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)/, '$1-$2-$3T$4:$5:$6');
+
+/**
+ * One item per email, in the order given, with the periods its calendars are busy between `start`
+ * and `end`. Floating dates, as those of all-day events, are read in `timeZone`.
+ */
+export async function getFreeBusy(
+	call: Request,
+	list: string,
+	start: string,
+	end: string,
+	timeZone: string,
+): Promise<IDataObject[]> {
+	const from = toUtc(start, timeZone);
+	const to = toUtc(end, timeZone);
+	if (to < from) throw new Error('The end is before the start');
+	const seen = new Set<string>();
+	const unique = emails(list).filter(
+		(email) => !seen.has(email.toLowerCase()) && seen.add(email.toLowerCase()),
+	);
+	if (!unique.length) throw new Error('Give at least one email');
+
+	const users: Array<{ email: string; userId: string }> = [];
+	for (const email of unique) {
+		const found = (await call({ method: 'GET', url: '/api/users', qs: { email } })) as
+			| Array<{ _id?: string }>
+			| undefined;
+		const userId = found?.[0]?._id;
+		if (!userId) throw new Error(`No Twake user has the email ${email}`);
+		users.push({ email, userId });
+	}
+
+	const answer = (await call({
+		method: 'POST',
+		url: '/dav/calendars/freebusy',
+		headers: { Accept: 'application/json' },
+		body: { start: utc(from), end: utc(to), timezone: timeZone, users: users.map((u) => u.userId) },
+	})) as {
+		users?: Array<{ id: string; calendars?: Array<{ busy?: Array<{ start: string; end: string }> }> }>;
+	};
+
+	return users.map(({ email, userId }) => {
+		const calendars = answer.users?.find((user) => user.id === userId)?.calendars ?? [];
+		// Only the periods are kept, not the UIDs of the events of other users.
+		const busy = calendars
+			.flatMap((calendar) => calendar.busy ?? [])
+			.map((period) => ({ start: isoDate(period.start), end: isoDate(period.end) }))
+			.sort((a, b) => a.start.localeCompare(b.start));
+		return { email, userId, available: busy.length === 0, busy };
+	});
+}
+
 /**
  * Creates a Twake Visio room owned by the user, not attached to any event. The service has no
  * route to delete a room, so a failed call is not retried.

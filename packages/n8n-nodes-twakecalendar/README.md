@@ -15,6 +15,9 @@ user.
   previous ones, and an attendee still invited keeps their answer. For a recurring event, the main
   event changes and its exceptions stay as they are. Outputs like Create.
 - **Event > Delete**: deletes an event, which cancels it for its attendees.
+- **Free/Busy > Get**: one item per email, with the `userId`, the periods its calendars are busy
+  between the start and the end (`busy`, each with a `start` and an `end`), and `available`, true
+  when there are none. An email with no Twake user fails the item.
 - **Video Conference > Create**: creates a video conference room owned by the user, and outputs its
   `url`. The room is not attached to any event, and cannot be deleted from n8n. Requires video
   conferences (Twake Visio) to be enabled on the calendar side service.

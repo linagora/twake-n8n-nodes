@@ -18,6 +18,7 @@ import {
 	createEvent,
 	createVideoConference,
 	deleteEvent,
+	getFreeBusy,
 	getUser,
 	listCalendars,
 	updateEvent,
@@ -150,8 +151,42 @@ export class TwakeCalendarNode implements INodeType {
 				options: [
 					{ name: 'Calendar', value: 'calendar' },
 					{ name: 'Event', value: 'event' },
+					{ name: 'Free/Busy', value: 'freeBusy' },
 					{ name: 'Video Conference', value: 'videoConference' },
 				],
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				default: 'get',
+				displayOptions: { show: { resource: ['freeBusy'] } },
+				options: [
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get the busy periods of users between two dates',
+						action: 'Get the free busy periods of users',
+					},
+				],
+			},
+			{
+				displayName: 'Emails',
+				name: 'emails',
+				type: 'string',
+				required: true,
+				default: '',
+				placeholder: 'e.g. alice@example.com, bob@example.com',
+				description: 'Comma-separated emails of the users to check',
+				displayOptions: { show: { resource: ['freeBusy'] } },
+			},
+			{ ...start, required: true, displayOptions: { show: { resource: ['freeBusy'] } } },
+			{
+				...end,
+				hint: 'Without a time zone, the time zone of the workflow applies',
+				required: true,
+				displayOptions: { show: { resource: ['freeBusy'] } },
 			},
 			{
 				displayName: 'Operation',
@@ -301,6 +336,17 @@ export class TwakeCalendarNode implements INodeType {
 							: new NodeApiError(this.getNode(), error as JsonObject, { itemIndex });
 					}
 					out.push({ json, pairedItem });
+					continue;
+				}
+				if (resource === 'freeBusy') {
+					const users = await getFreeBusy(
+						call,
+						param('emails') as string,
+						String(param('start')),
+						String(param('end')),
+						timeZone,
+					);
+					for (const json of users) out.push({ json, pairedItem });
 					continue;
 				}
 				user ??= await getUser(call);
