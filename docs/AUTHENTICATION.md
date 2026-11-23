@@ -35,6 +35,12 @@ Twake Tasks calls its backend directly with the SSO access token (D8), which mus
 `twaketasks` audience. Its credential is `twakeTasksOAuth2Api`. Tested on dev on 2026-11-12 with a
 preset SSO client: the token is accepted, and the project and task operations answered.
 
+Its trigger, **Twake Tasks Trigger**, also sends the token to the Twake webhook gateway, which must
+find its own audience, `twake-webhook-gateway` on dev, and the person's `uuid` and `org_id` in
+userinfo. Tested on the devbox on 2026-11-23 with a preset SSO client whose additional audiences are
+`twaketasks twake-webhook-gateway`: publishing the workflow subscribes, a task created starts it,
+and the node reads the task with the same token.
+
 ## Twake Account
 
 Twake Account calls cozy-stack with a stack token obtained from `/auth/token_exchange`, like Twake
@@ -63,8 +69,9 @@ so the user only clicks **Connect**.
    database, so they survive restarts and reach every worker.
 2. `POST` to that endpoint, with the token, a JSON object with one entry per credential type, such as
    `twakeDriveOAuth2Api`: `clientId`, `clientSecret` and `ssoUrl`, plus `apiUrl` for Calendar,
-   Chat (the homeserver), Contacts, Mail and Tasks. Never an entry for the parent `oAuth2Api`, which would apply to every
-   OAuth2 credential of the instance.
+   Chat (the homeserver), Contacts, Mail and Tasks, and `gatewayUrl` for Tasks (the Twake webhook
+   gateway, which the Twake Tasks Trigger needs). Never an entry for the parent `oAuth2Api`, which
+   would apply to every OAuth2 credential of the instance.
 
 An overwrite only fills empty fields, so existing credentials keep their values. Tested on dev on
 2026-11-10 with n8n 2.46.6: Calendar and Drive connected and ran with only **Connect**. The

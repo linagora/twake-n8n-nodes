@@ -41,7 +41,7 @@ npm run n8n
 
 The target is n8n verification (D9).
 
-- One package has one node and one credential (D10).
+- One package has one action node, at most one trigger node, and one credential (D10, D18).
 - A node only references credentials declared by its own package, and a credential name is unique
   across the repository.
 - No runtime dependencies, and no access to the environment or to files.

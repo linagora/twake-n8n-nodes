@@ -12,7 +12,7 @@ parentheses: `grep -nE '^#{2,3} .*2026-11-09' docs/DECISION.md` lists what one d
 
 One repository, `linagora/twake-n8n-nodes`, with one folder per npm package under `packages/`.
 
-## D2. One node per Twake app, eight in all (decided, 2026-11-05; changed by D15, 2026-11-12)
+## D2. One node per Twake app, eight in all (decided, 2026-11-05; changed by D15, 2026-11-12, and D18, 2026-11-23)
 
 | Node     | Backend                     |
 | -------- | --------------------------- |
@@ -72,7 +72,7 @@ The target is n8n's verification: listed in the nodes panel and available on n8n
 its rules: `n8n-node` tooling, no runtime dependencies, no environment or file access, MIT, English,
 publication from GitHub Actions with provenance.
 
-## D10. Eight packages, each with one node and one credential (decided, 2026-11-09; changed by D15, 2026-11-12)
+## D10. Eight packages, each with one node and one credential (decided, 2026-11-09; changed by D15, 2026-11-12, and D18, 2026-11-23)
 
 n8n's rule is one third-party service per package, and `no-credential-reuse` forbids a package from
 using another package's credential, with no exception. So verified packages cannot share a login: a
@@ -137,3 +137,18 @@ trades it for a Matrix token on a fixed `N8N` device. See
 Each Synapse must list the n8n SSO client in `jwt_config.audiences`. To end access, revoke the login at
 the SSO, which ends the cached Matrix token within the hour, then log out the Matrix device, which ends
 that token at the homeserver. Logging out the device alone only lasts until the next login.
+
+## D18. Triggers come from the webhook gateway, in the package of their app (decided, 2026-11-23; changes D2 and D10)
+
+A trigger node subscribes its webhook URL at the Twake webhook gateway (ADR 075) with the user's SSO
+token, and never polls the backend. The gateway sends signed calls that carry ids only, and the node
+reads the object from its app with the same token, so the app's permissions decide what it sees.
+
+The trigger of an app sits in that app's package, next to its action node, and uses the same
+credential: a package now has one action node, at most one trigger node, and one credential. The
+"one node per Twake app" of D2 counts the action nodes. The credential gets an optional **Webhook
+Gateway URL**, preset by the admin like the others (D14). The trigger's technical name is the action
+node's plus `Trigger`, such as `twakeTasksNodeTrigger`: n8n only shows the action node and the
+trigger as one app in its node panel when the names match this way.
+
+First, **Twake Tasks Trigger**, as Twake Tasks is the only app that publishes what a trigger needs.
