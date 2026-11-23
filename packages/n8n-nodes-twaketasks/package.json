@@ -31,7 +31,8 @@
 			"dist/credentials/TwakeTasksOAuth2Api.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/TwakeTasks/TwakeTasksNode.node.js"
+			"dist/nodes/TwakeTasks/TwakeTasksNode.node.js",
+			"dist/nodes/TwakeTasksNodeTrigger/TwakeTasksNodeTrigger.node.js"
 		]
 	},
 	"peerDependencies": {
