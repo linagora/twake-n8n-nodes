@@ -35,6 +35,14 @@ export class TwakeTasksOAuth2Api implements ICredentialType {
 			hint: 'Base URL of the Twake SSO',
 		},
 		{
+			displayName: 'Webhook Gateway URL',
+			name: 'gatewayUrl',
+			type: 'string',
+			default: '',
+			placeholder: 'e.g. https://webhooks.twake.app',
+			hint: 'Base URL of the Twake webhook gateway, needed by the Twake Tasks Trigger only',
+		},
+		{
 			displayName: 'Authorization URL',
 			name: 'authUrl',
 			type: 'hidden',

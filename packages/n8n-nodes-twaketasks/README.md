@@ -44,6 +44,37 @@ in the time zone of the workflow, and the whole list comes out at once.
 
 Errors of Twake Tasks show their code, such as `stale_neighbours`.
 
+## Trigger
+
+The **Twake Tasks Trigger** node starts a workflow on these events:
+
+- **Task Created** and **Task Deleted** (moved to the trash), with **Created By** and **Deleted By**
+  set to **Me**: Twake Tasks only tells you about the tasks you create or delete.
+- **Task Assigned** and **Task Unassigned**: someone is assigned to a task, or removed from it.
+  Twake Tasks only tells you when you assign or remove someone, and when someone assigns you.
+
+**Assigned To** narrows both assignment events to the person assigned or removed:
+
+- **Me**, the default: someone assigns you, or you assign or remove yourself.
+- **Anyone**: whoever you assign or remove, and you when someone assigns you.
+- **Specific People**: a list of emails, matched against the members of the task's project, so a
+  person who left it is not recognised.
+
+It does not poll Twake Tasks. When the workflow is published, or listens for a test event, the node
+subscribes its webhook URL at the Twake webhook gateway (ADR 075); when the workflow is unpublished,
+it deletes the subscription. When n8n publishes the workflow again, a subscription for another URL,
+such as after n8n moved, or for other events is replaced. Each call is signed, and the node refuses
+one whose signature is wrong or older than five minutes.
+
+The gateway sends ids only. With **Include Task** on, the default, the node reads the task from its
+board with your token and outputs it as `task`, or `null` when you cannot see it anymore. Each item
+holds the event: `id`, `type`, `time`, `twakeorg`, `twakeactorid` (the uuid of who made the change),
+`data.object` (the task's `id` and `board.id`), `data.container` (its project) and, for an
+assignment, `data.assignee.id` (the uuid of the person assigned or removed).
+
+The gateway delivers at least once, in no set order: deduplicate on `id` where it matters. An n8n
+unreachable for more than 24 hours loses the events of that time.
+
 ## Usage
 
 Set up the credential and add the node. The projects of the connected user come out as one item
@@ -65,5 +96,9 @@ access token goes straight to Twake Tasks, without exchange.
    access token must be accepted by Twake Tasks.
 2. In the credential, fill in the Tasks URL, the SSO URL, the client ID and secret, and click
    **Connect**.
+
+The trigger also needs the **Webhook Gateway URL** of the credential, and an access token that the
+gateway accepts: the SSO adds the gateway to the audiences of the n8n client, and the gateway
+allows the webhook URLs of this n8n.
 
 To cut access, revoke the login at the SSO.
