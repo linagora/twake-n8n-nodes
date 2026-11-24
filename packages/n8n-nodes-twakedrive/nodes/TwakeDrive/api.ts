@@ -3,6 +3,7 @@ import type {
 	IExecuteFunctions,
 	IHttpRequestOptions,
 	ILoadOptionsFunctions,
+	IWebhookFunctions,
 } from 'n8n-workflow';
 
 import { instanceUrlOf } from '../../credentials/stackToken';
@@ -12,7 +13,7 @@ export { ROOT_DIR_ID } from './tree';
 const CREDENTIAL_TYPE = 'twakeDriveOAuth2Api';
 const JSON_API = 'application/vnd.api+json';
 
-export type DriveContext = IExecuteFunctions | ILoadOptionsFunctions;
+export type DriveContext = IExecuteFunctions | ILoadOptionsFunctions | IWebhookFunctions;
 
 export type DriveEntry = {
 	id: string;

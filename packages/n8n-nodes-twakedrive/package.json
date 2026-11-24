@@ -31,7 +31,8 @@
 			"dist/credentials/TwakeDriveOAuth2Api.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/TwakeDrive/TwakeDriveNode.node.js"
+			"dist/nodes/TwakeDrive/TwakeDriveNode.node.js",
+			"dist/nodes/TwakeDriveNodeTrigger/TwakeDriveNodeTrigger.node.js"
 		]
 	},
 	"peerDependencies": {
