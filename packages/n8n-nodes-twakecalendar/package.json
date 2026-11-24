@@ -1,5 +1,5 @@
 {
-	"name": "n8n-nodes-twakecalendar",
+	"name": "@linagora/n8n-nodes-twakecalendar",
 	"version": "0.1.0",
 	"description": "n8n community node to interact with Twake Calendar",
 	"license": "MIT",

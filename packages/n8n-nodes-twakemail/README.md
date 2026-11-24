@@ -1,4 +1,4 @@
-# n8n-nodes-twakemail
+# @linagora/n8n-nodes-twakemail
 
 n8n community node to read and send the emails of a [Twake Workplace](https://twake.app/) user.
 

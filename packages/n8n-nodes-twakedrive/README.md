@@ -1,4 +1,4 @@
-# n8n-nodes-twakedrive
+# @linagora/n8n-nodes-twakedrive
 
 n8n community node to use [Twake Drive](https://twake.app/) in your workflows.
 
@@ -107,10 +107,12 @@ Connected devices** only lasts until the next exchange, within the hour, which c
 
 ## Version history
 
-### 1.7.0
+### 0.1.0
 
-Moved to the [twake-n8n-nodes](../..) monorepo. Previous versions come from
-[cozy/n8n-nodes-twakedrive](https://github.com/cozy/n8n-nodes-twakedrive).
+First version of `@linagora/n8n-nodes-twakedrive`, from the [twake-n8n-nodes](../..) monorepo. It
+follows `n8n-nodes-twakedrive` 1.6.0, from
+[cozy/n8n-nodes-twakedrive](https://github.com/cozy/n8n-nodes-twakedrive), and what follows is
+compared to that version.
 
 - Fix uploads and updates when n8n stores binaries on the filesystem, the default mode: the stored ID
   was sent instead of the content

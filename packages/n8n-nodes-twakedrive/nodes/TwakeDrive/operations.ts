@@ -408,7 +408,7 @@ const deleteShare: Operation = async function (itemIndex) {
 		'Share',
 		itemIndex,
 	);
-	// Workflows saved with n8n-nodes-twakedrive < 1.7 hold a JSON payload instead of the ID
+	// Workflows saved with the unscoped n8n-nodes-twakedrive hold a JSON payload instead of the ID
 	const permissionsId = raw.startsWith('{') ? String(JSON.parse(raw).id) : raw;
 	await driveRequest.call(this, {
 		method: 'DELETE',

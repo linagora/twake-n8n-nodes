@@ -152,3 +152,17 @@ node's plus `Trigger`, such as `twakeTasksNodeTrigger`: n8n only shows the actio
 trigger as one app in its node panel when the names match this way.
 
 First, **Twake Tasks Trigger**, as Twake Tasks is the only app that publishes what a trigger needs.
+
+## D19. Packages are public, under the `@linagora` scope on npm (decided, 2026-11-24)
+
+The repository is public and each package is published to the public npm registry as
+`@linagora/n8n-nodes-twake…`, such as `@linagora/n8n-nodes-twakedrive`. A scoped name is valid for
+n8n's verification, so D9 stays the target and the names do not change on the way to it. The folders
+under `packages/` keep their unscoped names.
+
+Every package starts at 0.1.0 under its scoped name, Drive included, and stays below 1.0.0 until a
+decision moves it there.
+
+An n8n hosted by Twake installs the packages from npm at start, for every user of the instance, and
+they are not installed from the editor. Node types carry the package name, such as
+`@linagora/n8n-nodes-twakedrive.twakeDriveNode`.

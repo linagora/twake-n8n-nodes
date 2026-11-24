@@ -1,4 +1,4 @@
-# n8n-nodes-twakecontacts
+# @linagora/n8n-nodes-twakecontacts
 
 n8n community node to read the address books of a [Twake Workplace](https://twake.app/) user.
 

@@ -1,4 +1,4 @@
-# n8n-nodes-twakecalendar
+# @linagora/n8n-nodes-twakecalendar
 
 n8n community node to manage the calendars and events of a [Twake Workplace](https://twake.app/)
 user.

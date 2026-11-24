@@ -1,5 +1,5 @@
 {
-	"name": "n8n-nodes-twakeaccount",
+	"name": "@linagora/n8n-nodes-twakeaccount",
 	"version": "0.1.0",
 	"description": "n8n community node to interact with a Twake account",
 	"license": "MIT",

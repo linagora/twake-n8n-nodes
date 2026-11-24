@@ -1,6 +1,6 @@
 {
-	"name": "n8n-nodes-twakedrive",
-	"version": "1.7.0",
+	"name": "@linagora/n8n-nodes-twakedrive",
+	"version": "0.1.0",
 	"description": "n8n community node to interact with Twake Drive",
 	"license": "MIT",
 	"homepage": "https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twakedrive#readme",
