@@ -114,6 +114,9 @@ follows `n8n-nodes-twakedrive` 1.6.0, from
 [cozy/n8n-nodes-twakedrive](https://github.com/cozy/n8n-nodes-twakedrive), and what follows is
 compared to that version.
 
+Uninstall `n8n-nodes-twakedrive` before installing this package. Both declare a credential named
+`twakeDriveOAuth2Api`, with different fields, and n8n only keeps one of the two.
+
 - Fix uploads and updates when n8n stores binaries on the filesystem, the default mode: the stored ID
   was sent instead of the content
 - Fix listing a folder picked in the dropdown, which always listed the root
