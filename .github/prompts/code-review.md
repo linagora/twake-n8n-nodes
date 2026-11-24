@@ -26,7 +26,9 @@ already posted. If an issue is already raised there, do not repeat it.
 3. Only report issues you can justify with a concrete failure scenario
    (input or state, then wrong result). No speculative "consider" remarks.
 4. This is a read-only review: you have no shell and you cannot edit files.
-   Read and search the files of the repository, and fetch URLs.
+   Read and search the files of the repository. Fetch a URL only to confirm
+   or drop a finding you are about to report, never to explore, and never
+   search GitHub for repositories.
 
 ## What to check
 
