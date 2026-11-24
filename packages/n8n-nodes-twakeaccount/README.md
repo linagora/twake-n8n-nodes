@@ -1,4 +1,4 @@
-# n8n-nodes-twakeaccount
+# @linagora/n8n-nodes-twakeaccount
 
 n8n community node to read the apps and the disk usage of a [Twake Workplace](https://twake.app/)
 instance.

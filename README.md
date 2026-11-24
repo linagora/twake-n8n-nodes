@@ -4,13 +4,13 @@
 
 | Package | Node | Features |
 | --- | --- | --- |
-| [`n8n-nodes-twakedrive`](packages/n8n-nodes-twakedrive) | Twake Drive | Files, folders and share links |
-| [`n8n-nodes-twakeaccount`](packages/n8n-nodes-twakeaccount) | Twake Account | List apps, disk usage |
-| [`n8n-nodes-twakecalendar`](packages/n8n-nodes-twakecalendar) | Twake Calendar | List calendars |
-| [`n8n-nodes-twakemail`](packages/n8n-nodes-twakemail) | Twake Mail | Search and read emails, threads and attachments |
-| [`n8n-nodes-twakecontacts`](packages/n8n-nodes-twakecontacts) | Twake Contacts | List address books |
-| [`n8n-nodes-twakechat`](packages/n8n-nodes-twakechat) | Twake Chat | Current account |
-| [`n8n-nodes-twaketasks`](packages/n8n-nodes-twaketasks) | Twake Tasks | List projects |
+| [`@linagora/n8n-nodes-twakedrive`](packages/n8n-nodes-twakedrive) | Twake Drive | Files, folders and share links |
+| [`@linagora/n8n-nodes-twakeaccount`](packages/n8n-nodes-twakeaccount) | Twake Account | List apps, disk usage |
+| [`@linagora/n8n-nodes-twakecalendar`](packages/n8n-nodes-twakecalendar) | Twake Calendar | List calendars |
+| [`@linagora/n8n-nodes-twakemail`](packages/n8n-nodes-twakemail) | Twake Mail | Search and read emails, threads and attachments |
+| [`@linagora/n8n-nodes-twakecontacts`](packages/n8n-nodes-twakecontacts) | Twake Contacts | List address books |
+| [`@linagora/n8n-nodes-twakechat`](packages/n8n-nodes-twakechat) | Twake Chat | Current account |
+| [`@linagora/n8n-nodes-twaketasks`](packages/n8n-nodes-twaketasks) | Twake Tasks | List projects |
 
 ## Development
 
@@ -40,4 +40,4 @@ npm run n8n
 ```
 
 In this mode the node types are prefixed with `CUSTOM.`, while they are prefixed with the package
-name once installed from npm.
+name once installed from npm, such as `@linagora/n8n-nodes-twakedrive.twakeDriveNode`.

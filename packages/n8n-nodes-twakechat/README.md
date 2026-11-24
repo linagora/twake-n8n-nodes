@@ -1,4 +1,4 @@
-# n8n-nodes-twakechat
+# @linagora/n8n-nodes-twakechat
 
 n8n community node to send, edit and react to messages in the Matrix rooms of a
 [Twake Workplace](https://twake.app/) user.

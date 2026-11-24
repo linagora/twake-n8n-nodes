@@ -1,4 +1,4 @@
-# n8n-nodes-twaketasks
+# @linagora/n8n-nodes-twaketasks
 
 n8n community node to read the projects and manage the tasks of a
 [Twake Workplace](https://twake.app/) user.
