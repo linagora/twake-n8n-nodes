@@ -11,6 +11,13 @@ Twake Drive calls cozy-stack with a stack token obtained from `/auth/token_excha
 `twakeDriveOAuth2Api`. Reads are tested on dev, and writes are refused until the n8n app manifest
 allows them.
 
+Its trigger, **Twake Drive Trigger**, cannot send the stack token to the Twake webhook gateway: it
+refreshes an SSO access token with the refresh token of the credential, caches it while it lasts, and
+sends that one. The stack names the owner of a file by the `uuid` claim, which it keeps at the token
+exchange, so the id_token must carry it. Tested on the devbox on 2026-11-23 with the preset `n8n`
+client, its id_token forced to carry `uuid` and `workplaceFqdn`: publishing the workflow subscribes,
+a file uploaded to the drive starts it, and the node reads the file with the stack token.
+
 ## Twake Mail
 
 Twake Mail calls the JMAP server directly with the SSO access token (D8), which must carry the

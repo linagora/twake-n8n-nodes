@@ -42,6 +42,30 @@ Example workflow: save the invoices received by another node.
 3. **Twake Drive**, **Share > Create**, with the file set by ID to `{{ $json.data.id }}`, to get a
    link in the output.
 
+## Trigger
+
+The **Twake Drive Trigger** node starts a workflow when a file is added to your drive, by you or
+through one of your sharing links (**File Created**).
+
+**Watch** picks the files: **Any File**, or **Inside a Folder**, from the list or by ID. Only the
+files directly in the folder start the workflow, unless **Watch Subfolders** is on: the node then
+reads the path of the folder the file is in, and starts for a file at any depth.
+
+It does not poll the instance. When the workflow is published, or listens for a test event, the node
+subscribes its webhook URL at the Twake webhook gateway (ADR 075); when the workflow is unpublished,
+it deletes the subscription. When n8n publishes the workflow again, a subscription for another URL or
+for other events is replaced. Each call is signed, and the node refuses one whose signature is wrong
+or older than five minutes.
+
+The gateway sends ids only. With **Include File** on, the default, the node reads the file with your
+token and outputs it as `file`, or `null` when you cannot see it anymore. Each item holds the event:
+`id`, `type`, `time`, `twakeorg`, `twakeactorid` (your uuid, absent for a file added through a sharing
+link) and `data.object` (the file's `id` and `folder.id`).
+
+The instance publishes these events only when its context sets `drive_activity.file_created`, for
+the files uploaded to a personal drive, and once it knows your uuid from a login or a token exchange.
+The gateway delivers at least once, in no set order: deduplicate on `id` where it matters.
+
 ## Credentials
 
 The node uses the **Twake Drive OAuth2 API** credential, which logs in through the Twake SSO. For each instance, n8n
@@ -73,6 +97,10 @@ it allows them.
 3. In the credential, fill in the SSO URL, the client ID and secret, and click **Connect**. The
    instance URL is optional: left empty, the node uses the instance the SSO gives in the
    `workplaceFqdn` claim of the id_token.
+
+The trigger also needs the **Webhook Gateway URL** of the credential. It calls the gateway with an
+access token it refreshes at the SSO, which must list the gateway in the audiences of the n8n client,
+and the id_token must carry the `uuid` claim, which the stack keeps at the exchange.
 
 To cut access for good, revoke the login at the SSO. Removing the client from **Twake Settings >
 Connected devices** only lasts until the next exchange, within the hour, which creates a new one.
