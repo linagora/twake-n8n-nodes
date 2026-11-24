@@ -27,7 +27,7 @@ import {
 	type State,
 } from './trigger';
 
-const CREDENTIAL_TYPE = 'twakeTasksOAuth2Api';
+const CREDENTIAL_TYPE = 'twakeProjectOAuth2Api';
 
 const EVENTS = [
 	['Task Assigned', 'assigned', 'Someone is assigned to a task'],
@@ -46,7 +46,7 @@ type Context = IHookFunctions | IWebhookFunctions;
 const statusOf = (error: unknown) =>
 	Number((error as { httpCode?: string }).httpCode ?? (error as { status?: number }).status);
 
-/** Calls the gateway or Twake Tasks, at the URL of the credential, with the user's token. */
+/** Calls the gateway or Twake Project, at the URL of the credential, with the user's token. */
 function requestOf(context: Context, base: 'apiUrl' | 'gatewayUrl'): Request {
 	return async (options, tolerated = []) => {
 		const credentials = await context.getCredentials<Credentials>(CREDENTIAL_TYPE);
@@ -90,17 +90,17 @@ function settingsOf(context: Context): Settings {
 
 const stateOf = (context: Context) => context.getWorkflowStaticData('node') as State;
 
-export class TwakeTasksNodeTrigger implements INodeType {
+export class TwakeProjectNodeTrigger implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Twake Tasks Trigger',
+		displayName: 'Twake Project Trigger',
 		// The action node's name plus Trigger, so that n8n shows both under one app.
-		name: 'twakeTasksNodeTrigger',
+		name: 'twakeProjectNodeTrigger',
 		icon: { light: 'file:icon.svg', dark: 'file:icon.svg' },
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["events"].join(", ")}}',
-		description: 'Starts the workflow when one of your tasks changes in Twake Tasks',
-		defaults: { name: 'Twake Tasks Trigger' },
+		description: 'Starts the workflow when one of your tasks changes in Twake Project',
+		defaults: { name: 'Twake Project Trigger' },
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
 		credentials: [{ name: CREDENTIAL_TYPE, required: true }],
@@ -128,7 +128,7 @@ export class TwakeTasksNodeTrigger implements INodeType {
 				name: 'createdBy',
 				type: 'options',
 				default: 'me',
-				description: 'Who creates the task. Twake Tasks only tells you about your own.',
+				description: 'Who creates the task. Twake Project only tells you about your own.',
 				displayOptions: { show: { events: ['created'] } },
 				options: [{ name: 'Me', value: 'me' }],
 			},
@@ -137,7 +137,8 @@ export class TwakeTasksNodeTrigger implements INodeType {
 				name: 'deletedBy',
 				type: 'options',
 				default: 'me',
-				description: 'Who moves the task to the trash. Twake Tasks only tells you about your own.',
+				description:
+					'Who moves the task to the trash. Twake Project only tells you about your own.',
 				displayOptions: { show: { events: ['deleted'] } },
 				options: [{ name: 'Me', value: 'me' }],
 			},
@@ -147,7 +148,7 @@ export class TwakeTasksNodeTrigger implements INodeType {
 				type: 'options',
 				default: 'me',
 				description:
-					'Who is assigned or removed. Twake Tasks only tells you when you assign or remove someone, and when someone assigns you.',
+					'Who is assigned or removed. Twake Project only tells you when you assign or remove someone, and when someone assigns you.',
 				displayOptions: { show: { events: ASSIGNMENT_EVENTS } },
 				// Me first: the choice most workflows want.
 				options: [

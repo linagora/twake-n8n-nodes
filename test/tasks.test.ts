@@ -21,7 +21,7 @@ import {
 	simpleAction,
 	transferTask,
 	updateTask,
-} from '../packages/n8n-nodes-twaketasks/nodes/TwakeTasks/tasks.ts';
+} from '../packages/n8n-nodes-twakeproject/nodes/TwakeProject/tasks.ts';
 
 const task = '/api/boards/b1/tasks/t1';
 
@@ -174,7 +174,7 @@ test('finds the code of the backend in an error n8n wrapped', () => {
 	});
 	assert.equal(
 		refusalMessage(new NodeApiError(node, axiosLike)),
-		'Twake Tasks refused the request: stale_neighbours',
+		'Twake Project refused the request: stale_neighbours',
 	);
 	assert.equal(refusalMessage(new Error('socket hang up')), undefined);
 });
@@ -182,7 +182,7 @@ test('finds the code of the backend in an error n8n wrapped', () => {
 test('reads the code of an API error, as an object or as text', () => {
 	assert.equal(
 		refusalMessage({ cause: { response: { data: '{"error":"invalid_section"}' } } }),
-		'Twake Tasks refused the request: invalid_section',
+		'Twake Project refused the request: invalid_section',
 	);
 	assert.equal(refusalMessage({ context: { data: 'Bad Gateway' } }), undefined);
 });

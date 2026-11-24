@@ -18,7 +18,7 @@ import {
 	type Request,
 	type Settings,
 	type State,
-} from '../packages/n8n-nodes-twaketasks/nodes/TwakeTasksNodeTrigger/trigger.ts';
+} from '../packages/n8n-nodes-twakeproject/nodes/TwakeProjectNodeTrigger/trigger.ts';
 
 const secret = 'whsec_test';
 const body = Buffer.from('{"id":"e1","type":"com.twake.tasks.task.created.v1"}');

@@ -197,7 +197,7 @@ function apiErrorCode(error: unknown): string | undefined {
 /** The message for a refusal of the backend, undefined for an error without its code. */
 export function refusalMessage(error: unknown): string | undefined {
 	const code = apiErrorCode(error);
-	return code ? `Twake Tasks refused the request: ${code}` : undefined;
+	return code ? `Twake Project refused the request: ${code}` : undefined;
 }
 
 const DONE_CATEGORIES = ['completed', 'canceled'];

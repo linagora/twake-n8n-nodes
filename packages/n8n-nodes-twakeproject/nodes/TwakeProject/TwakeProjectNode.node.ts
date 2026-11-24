@@ -39,7 +39,7 @@ import {
 	type TaskFields,
 } from './tasks';
 
-const CREDENTIAL_TYPE = 'twakeTasksOAuth2Api';
+const CREDENTIAL_TYPE = 'twakeProjectOAuth2Api';
 
 async function caller(context: IExecuteFunctions | ILoadOptionsFunctions): Promise<Request> {
 	const { apiUrl } = await context.getCredentials<{ apiUrl: string }>(CREDENTIAL_TYPE);
@@ -83,16 +83,16 @@ function nodeError(node: INode, error: unknown, itemIndex: number) {
 	return failure;
 }
 
-export class TwakeTasksNode implements INodeType {
+export class TwakeProjectNode implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Twake Tasks',
-		name: 'twakeTasksNode',
+		displayName: 'Twake Project',
+		name: 'twakeProjectNode',
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{ $parameter["operation"] + ": " + $parameter["resource"] }}',
 		icon: { light: 'file:icon.svg', dark: 'file:icon.svg' },
 		description: 'Read the projects and manage the tasks of a Twake user',
-		defaults: { name: 'Twake Tasks' },
+		defaults: { name: 'Twake Project' },
 		credentials: [{ name: CREDENTIAL_TYPE, required: true }],
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],

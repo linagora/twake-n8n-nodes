@@ -1,4 +1,4 @@
-# @linagora/n8n-nodes-twaketasks
+# @linagora/n8n-nodes-twakeproject
 
 n8n community node to read the projects and manage the tasks of a
 [Twake Workplace](https://twake.app/) user.
@@ -42,16 +42,16 @@ in the time zone of the workflow, and the whole list comes out at once.
   included, assigned to the user or, outside managed projects, to nobody.
 - **Task > Get Filtered**: the tasks matching a saved filter of the user, chosen in a list.
 
-Errors of Twake Tasks show their code, such as `stale_neighbours`.
+Errors of Twake Project show their code, such as `stale_neighbours`.
 
 ## Trigger
 
-The **Twake Tasks Trigger** node starts a workflow on these events:
+The **Twake Project Trigger** node starts a workflow on these events:
 
 - **Task Created** and **Task Deleted** (moved to the trash), with **Created By** and **Deleted By**
-  set to **Me**: Twake Tasks only tells you about the tasks you create or delete.
+  set to **Me**: Twake Project only tells you about the tasks you create or delete.
 - **Task Assigned** and **Task Unassigned**: someone is assigned to a task, or removed from it.
-  Twake Tasks only tells you when you assign or remove someone, and when someone assigns you.
+  Twake Project only tells you when you assign or remove someone, and when someone assigns you.
 
 **Assigned To** narrows both assignment events to the person assigned or removed:
 
@@ -60,7 +60,7 @@ The **Twake Tasks Trigger** node starts a workflow on these events:
 - **Specific People**: a list of emails, matched against the members of the task's project, so a
   person who left it is not recognised.
 
-It does not poll Twake Tasks. When the workflow is published, or listens for a test event, the node
+It does not poll Twake Project. When the workflow is published, or listens for a test event, the node
 subscribes its webhook URL at the Twake webhook gateway (ADR 075); when the workflow is unpublished,
 it deletes the subscription. When n8n publishes the workflow again, a subscription for another URL,
 such as after n8n moved, or for other events is replaced. Each call is signed, and the node refuses
@@ -83,17 +83,17 @@ each.
 Example workflow:
 
 1. **Schedule Trigger**, once a week.
-2. **Twake Tasks**, **Project > Get Many**.
+2. **Twake Project**, **Project > Get Many**.
 3. Any node that stores `{{ $json.name }}`.
 
 ## Credentials
 
-The node uses the **Twake Tasks OAuth2 API** credential, which logs in through the Twake SSO. The
-access token goes straight to Twake Tasks, without exchange.
+The node uses the **Twake Project OAuth2 API** credential, which logs in through the Twake SSO. The
+access token goes straight to Twake Project, without exchange.
 
 1. In the SSO, register a confidential OIDC client for n8n, for example `n8n`, with the
    `openid profile email offline_access` scopes and the **OAuth Redirect URL** of the credential. Its
-   access token must be accepted by Twake Tasks.
+   access token must be accepted by Twake Project.
 2. In the credential, fill in the Tasks URL, the SSO URL, the client ID and secret, and click
    **Connect**.
 

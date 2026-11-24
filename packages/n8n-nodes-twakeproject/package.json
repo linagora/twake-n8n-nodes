@@ -1,13 +1,13 @@
 {
-	"name": "@linagora/n8n-nodes-twaketasks",
+	"name": "@linagora/n8n-nodes-twakeproject",
 	"version": "0.1.0",
-	"description": "n8n community node to interact with Twake Tasks",
+	"description": "n8n community node to interact with Twake Project",
 	"license": "MIT",
-	"homepage": "https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twaketasks#readme",
+	"homepage": "https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twakeproject#readme",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/linagora/twake-n8n-nodes.git",
-		"directory": "packages/n8n-nodes-twaketasks"
+		"directory": "packages/n8n-nodes-twakeproject"
 	},
 	"keywords": [
 		"n8n-community-node-package"
@@ -33,11 +33,11 @@
 		"n8nNodesApiVersion": 1,
 		"strict": true,
 		"credentials": [
-			"dist/credentials/TwakeTasksOAuth2Api.credentials.js"
+			"dist/credentials/TwakeProjectOAuth2Api.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/TwakeTasks/TwakeTasksNode.node.js",
-			"dist/nodes/TwakeTasksNodeTrigger/TwakeTasksNodeTrigger.node.js"
+			"dist/nodes/TwakeProject/TwakeProjectNode.node.js",
+			"dist/nodes/TwakeProjectNodeTrigger/TwakeProjectNodeTrigger.node.js"
 		]
 	},
 	"peerDependencies": {

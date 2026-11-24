@@ -138,7 +138,7 @@ Each Synapse must list the n8n SSO client in `jwt_config.audiences`. To end acce
 the SSO, which ends the cached Matrix token within the hour, then log out the Matrix device, which ends
 that token at the homeserver. Logging out the device alone only lasts until the next login.
 
-## D18. Triggers come from the webhook gateway, in the package of their app (decided, 2026-11-23; changes D2 and D10)
+## D18. Triggers come from the webhook gateway, in the package of their app (decided, 2026-11-23; changes D2 and D10; names changed by D20, 2026-11-24)
 
 A trigger node subscribes its webhook URL at the Twake webhook gateway (ADR 075) with the user's SSO
 token, and never polls the backend. The gateway sends signed calls that carry ids only, and the node
@@ -168,3 +168,14 @@ Below 1.0.0 a breaking change releases a minor version.
 An n8n hosted by Twake installs the packages from npm at start, for every user of the instance, and
 they are not installed from the editor. Node types carry the package name, such as
 `@linagora/n8n-nodes-twakedrive.twakeDriveNode`.
+
+## D20. The Twake Tasks nodes are named Twake Project (decided, 2026-11-24; changes the names in D18)
+
+The app is named Twake Project since October 2026, and only its repository, `twake-tasks`, kept the old
+name. The nodes follow the app: the package is `@linagora/n8n-nodes-twakeproject`, with the **Twake
+Project** node (`twakeProjectNode`), the **Twake Project Trigger** node (`twakeProjectNodeTrigger`) and
+the `twakeProjectOAuth2Api` credential. Decided before the first publication, as a name on npm cannot
+be taken back.
+
+What the backend calls itself does not change, such as the `twaketasks` audience of the token. Inside
+the node, the resources are still Project and Task.
