@@ -1,6 +1,6 @@
 import type { IDataObject, IHttpRequestOptions } from 'n8n-workflow';
 
-/** Sends a request to the Tasks backend, `url` being relative to it. */
+/** Sends a request to the Twake Project backend, `url` being relative to it. */
 export type Request = (options: IHttpRequestOptions) => Promise<unknown>;
 
 export interface Section {

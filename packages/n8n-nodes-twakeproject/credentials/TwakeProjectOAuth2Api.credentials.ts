@@ -17,7 +17,7 @@ export class TwakeProjectOAuth2Api implements ICredentialType {
 
 	properties: INodeProperties[] = [
 		{
-			displayName: 'Tasks URL',
+			displayName: 'Project URL',
 			name: 'apiUrl',
 			type: 'string',
 			default: '',

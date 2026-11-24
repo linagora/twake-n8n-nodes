@@ -94,7 +94,7 @@ access token goes straight to Twake Project, without exchange.
 1. In the SSO, register a confidential OIDC client for n8n, for example `n8n`, with the
    `openid profile email offline_access` scopes and the **OAuth Redirect URL** of the credential. Its
    access token must be accepted by Twake Project.
-2. In the credential, fill in the Tasks URL, the SSO URL, the client ID and secret, and click
+2. In the credential, fill in the Project URL, the SSO URL, the client ID and secret, and click
    **Connect**.
 
 The trigger also needs the **Webhook Gateway URL** of the credential, and an access token that the
