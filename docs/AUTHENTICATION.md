@@ -76,7 +76,7 @@ so the user only clicks **Connect**.
    database, so they survive restarts and reach every worker.
 2. `POST` to that endpoint, with the token, a JSON object with one entry per credential type, such as
    `twakeDriveOAuth2Api`: `clientId`, `clientSecret` and `ssoUrl`, plus `apiUrl` for Calendar,
-   Chat (the homeserver), Contacts, Mail and Tasks, and `gatewayUrl` for Tasks (the Twake webhook
+   Chat (the homeserver), Contacts, Mail and Project, and `gatewayUrl` for Project (the Twake webhook
    gateway, which the Twake Project Trigger needs). Never an entry for the parent `oAuth2Api`, which
    would apply to every OAuth2 credential of the instance.
 
