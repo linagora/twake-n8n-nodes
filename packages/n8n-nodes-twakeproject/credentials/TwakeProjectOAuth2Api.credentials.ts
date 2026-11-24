@@ -1,18 +1,18 @@
 import type { Icon, ICredentialType, INodeProperties } from 'n8n-workflow';
 
-export class TwakeTasksOAuth2Api implements ICredentialType {
-	displayName = 'Twake Tasks OAuth2 API';
+export class TwakeProjectOAuth2Api implements ICredentialType {
+	displayName = 'Twake Project OAuth2 API';
 
-	name = 'twakeTasksOAuth2Api';
+	name = 'twakeProjectOAuth2Api';
 
 	documentationUrl =
-		'https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twaketasks#credentials';
+		'https://github.com/linagora/twake-n8n-nodes/tree/main/packages/n8n-nodes-twakeproject#credentials';
 
 	extends = ['oAuth2Api'];
 
 	icon: Icon = {
-		light: 'file:../nodes/TwakeTasks/icon.svg',
-		dark: 'file:../nodes/TwakeTasks/icon.svg',
+		light: 'file:../nodes/TwakeProject/icon.svg',
+		dark: 'file:../nodes/TwakeProject/icon.svg',
 	};
 
 	properties: INodeProperties[] = [
@@ -23,7 +23,7 @@ export class TwakeTasksOAuth2Api implements ICredentialType {
 			default: '',
 			required: true,
 			placeholder: 'e.g. https://tasks.twake.app',
-			hint: 'Base URL of Twake Tasks',
+			hint: 'Base URL of Twake Project',
 		},
 		{
 			displayName: 'SSO URL',
@@ -40,7 +40,7 @@ export class TwakeTasksOAuth2Api implements ICredentialType {
 			type: 'string',
 			default: '',
 			placeholder: 'e.g. https://webhooks.twake.app',
-			hint: 'Base URL of the Twake webhook gateway, needed by the Twake Tasks Trigger only',
+			hint: 'Base URL of the Twake webhook gateway, needed by the Twake Project Trigger only',
 		},
 		{
 			displayName: 'Authorization URL',

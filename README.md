@@ -10,7 +10,7 @@
 | [`@linagora/n8n-nodes-twakemail`](packages/n8n-nodes-twakemail) | Twake Mail | Search and read emails, threads and attachments |
 | [`@linagora/n8n-nodes-twakecontacts`](packages/n8n-nodes-twakecontacts) | Twake Contacts | List address books |
 | [`@linagora/n8n-nodes-twakechat`](packages/n8n-nodes-twakechat) | Twake Chat | Current account |
-| [`@linagora/n8n-nodes-twaketasks`](packages/n8n-nodes-twaketasks) | Twake Tasks | List projects |
+| [`@linagora/n8n-nodes-twakeproject`](packages/n8n-nodes-twakeproject) | Twake Project | List projects |
 
 ## Development
 

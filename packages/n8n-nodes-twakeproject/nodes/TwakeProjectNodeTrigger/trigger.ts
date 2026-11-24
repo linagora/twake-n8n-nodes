@@ -32,7 +32,7 @@ export const ASSIGNMENT_EVENTS = ['assigned', 'unassigned'];
 
 export type AssignedTo = 'me' | 'anyone' | 'people';
 
-/** Who made a change: only you, as Twake Tasks tells you about your own creations and deletions. */
+/** Who made a change: only you, as Twake Project tells you about your own creations and deletions. */
 export type MadeBy = 'me';
 
 /** The parameters of the node, read once per call. */
@@ -56,7 +56,7 @@ export interface State {
 }
 
 /**
- * A call to the gateway or to Twake Tasks, its URL relative to the credential's. It answers null
+ * A call to the gateway or to Twake Project, its URL relative to the credential's. It answers null
  * when the call fails with one of the `tolerated` statuses, and throws on any other failure.
  */
 export type Request = (
