@@ -1,45 +1,57 @@
-# Publishes one package of the monorepo to npm with a provenance statement.
-# Push a tag named after the package and its version: n8n-nodes-twakedrive@1.7.0
-# On npmjs.com, each package needs this repository and publish.yml as a trusted publisher.
+# Releases the packages changed since their last tag, as twake-libs does: multi-semantic-release sets
+# each version from the commits, publishes to npm with a provenance statement, tags, and commits the
+# changelog and the version. See the Publishing section of AGENTS.md.
+# On npmjs.com, each package needs this repository, publish.yml and the npm environment as a trusted
+# publisher.
 name: Publish
 
-# Publishing is disabled for now. To enable it, restore the tag trigger and remove `if: false`.
 on:
-  workflow_dispatch:
-  # push:
-  #   tags:
-  #     - 'n8n-nodes-*@*.*.*'
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: publish
 
 jobs:
   publish:
-    if: false
     name: Publish to npm
     runs-on: ubuntu-latest
+    environment: npm
 
     permissions:
-      id-token: write
-      contents: read
+      contents: write # tags, GitHub releases and the release commit
+      issues: write # @semantic-release/github comments on released issues
+      pull-requests: write # @semantic-release/github comments on released pull requests
+      id-token: write # npm trusted publishing (OIDC)
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # semantic-release reads the tags and the commits since them
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-          registry-url: https://registry.npmjs.org
 
-      - run: npm ci
+      # No lifecycle scripts while the OIDC token can be requested
+      - run: npm ci --ignore-scripts
 
       - run: npm test
 
-      - name: Publish
-        env:
-          RELEASE_MODE: 'true'
+      - run: npm run lint
+
+      - run: npm run build
+
+      - name: Configure git
         run: |
-          package="${GITHUB_REF_NAME%@*}"
-          version="${GITHUB_REF_NAME##*@}"
-          test "$(node -p "require('./packages/$package/package.json').version")" = "$version"
-          npm run lint --workspace "$package"
-          npm run build --workspace "$package"
-          npm publish --workspace "$package" --provenance --access public
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # `n8n-node prerelease`, the prepublishOnly script, refuses to publish without it
+          RELEASE_MODE: 'true'
+        run: npm run release

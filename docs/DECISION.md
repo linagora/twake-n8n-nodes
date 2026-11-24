@@ -161,7 +161,9 @@ n8n's verification, so D9 stays the target and the names do not change on the wa
 under `packages/` keep their unscoped names.
 
 Every package starts at 0.1.0 under its scoped name, Drive included, and stays below 1.0.0 until a
-decision moves it there.
+decision moves it there. Releases work as in twake-libs and twake-ui: on each push to `main`,
+`multi-semantic-release` sets the version of each changed package from its commits and publishes it.
+Below 1.0.0 a breaking change releases a minor version.
 
 An n8n hosted by Twake installs the packages from npm at start, for every user of the instance, and
 they are not installed from the editor. Node types carry the package name, such as

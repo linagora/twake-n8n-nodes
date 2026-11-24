@@ -7,11 +7,16 @@
 		"build": "npm run build --workspaces",
 		"lint": "npm run lint --workspaces",
 		"test": "node --test test/*.test.ts",
-		"n8n": "scripts/n8n-dev.sh"
+		"n8n": "scripts/n8n-dev.sh",
+		"release": "multi-semantic-release --deps.bump=ignore",
+		"release:dry": "multi-semantic-release --deps.bump=ignore --dry-run"
 	},
 	"devDependencies": {
 		"@n8n/node-cli": "^0.55.5",
+		"@semantic-release/changelog": "6.0.3",
+		"@semantic-release/git": "10.0.1",
 		"eslint": "9.39.4",
+		"multi-semantic-release": "3.1.0",
 		"n8n-workflow": "^2.16.0",
 		"prettier": "3.8.3",
 		"typescript": "5.9.3"

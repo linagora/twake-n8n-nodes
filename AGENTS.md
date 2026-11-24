@@ -48,7 +48,8 @@ The target is n8n verification (D9).
 - Follow n8n's [UX guidelines](https://docs.n8n.io/connect/create-nodes/build-your-node/reference/ux-guidelines).
   User-facing text is in English.
 - No permanent delete: a delete moves to the trash of the app (D16).
-- A change that breaks existing nodes or credentials goes in the version history of the package README.
+- A change that breaks existing nodes or credentials has a `BREAKING CHANGE:` footer in its commit,
+  saying what the user must do. It goes to the `CHANGELOG.md` of the package.
 - `stackToken.ts` is copied into each cozy-stack package, as packages cannot depend on each other. The
   copies stay identical.
 
@@ -59,7 +60,16 @@ is signed in and the credentials are connected. Do not use a built-in or headles
 
 ## Publishing
 
-Publishing is disabled. Do not enable it unless asked.
+Packages are published to npm under the `@linagora` scope (D19), the way twake-libs and twake-ui are.
+On each push to `main`, `multi-semantic-release` releases every package changed since its last tag: it
+sets the version from the commits, writes the `CHANGELOG.md` of the package, publishes to npm, tags
+`@linagora/n8n-nodes-twakedrive@0.2.0` and commits the version.
+
+- The type of a commit sets the version of the packages whose files it changes: `fix` is a patch,
+  `feat` a minor. Other types release nothing.
+- Below 1.0.0 a breaking change is a minor version, by the `releaseRules` of `.releaserc.json`. Going
+  to 1.0.0 is a decision: remove that rule, and the next breaking change releases 1.0.0.
+- Never set a version by hand, and never run `npm run release` locally: it publishes for real.
 
 ## Secrets
 
