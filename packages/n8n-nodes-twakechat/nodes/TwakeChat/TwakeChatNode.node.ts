@@ -11,25 +11,8 @@ import {
 	type JsonObject,
 } from 'n8n-workflow';
 
-import { retryWithNewLogin } from '../../credentials/matrixToken';
-import { editMessage, react, sendFile, sendMessage, type Request } from './messages';
-
-const CREDENTIAL_TYPE = 'twakeChatOAuth2Api';
-
-async function caller(context: IExecuteFunctions): Promise<Request> {
-	const credentials = await context.getCredentials(CREDENTIAL_TYPE);
-	const baseUrl = `${String(credentials.apiUrl).replace(/\/+$/, '')}/_matrix`;
-	const request: Request = async (options) =>
-		await context.helpers.httpRequestWithAuthentication.call(
-			context,
-			CREDENTIAL_TYPE,
-			{ json: true, ...options, url: `${baseUrl}${options.url}` },
-			// On a 401, n8n would retry with the stored SSO token, which must not reach the homeserver
-			{ oauth2: { skipTokenRefresh: true } },
-		);
-	return async (options) =>
-		await retryWithNewLogin(credentials, async () => await request(options));
-}
+import { CREDENTIAL_TYPE, homeserverOf } from './api';
+import { editMessage, react, sendFile, sendMessage } from './messages';
 
 const showFor = (operation: string[]) => ({ show: { resource: ['message'], operation } });
 
@@ -183,7 +166,7 @@ export class TwakeChatNode implements INodeType {
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const call = await caller(this);
+		const call = await homeserverOf(this);
 		const out: INodeExecutionData[] = [];
 
 		for (const [itemIndex] of this.getInputData().entries()) {
