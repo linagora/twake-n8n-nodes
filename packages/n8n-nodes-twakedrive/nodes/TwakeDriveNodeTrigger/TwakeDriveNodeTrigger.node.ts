@@ -17,6 +17,7 @@ import { listSearch } from '../TwakeDrive/listSearch';
 import { folderLocator } from '../TwakeDrive/properties/locators';
 import {
 	handleCall,
+	parseMimeTypes,
 	settingsError,
 	subscribe,
 	subscriptionExists,
@@ -133,6 +134,7 @@ function settingsOf(context: Context): Settings {
 				? (context.getNodeParameter('sourceFolder', '', { extractValue: true }) as string)
 				: '',
 		subfolders: watch === 'folder' && (context.getNodeParameter('subfolders', false) as boolean),
+		mimeTypes: parseMimeTypes(context.getNodeParameter('mimeTypes', '') as string),
 		includeFile: context.getNodeParameter('includeFile', true) as boolean,
 	};
 }
@@ -148,7 +150,8 @@ export class TwakeDriveNodeTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["events"].join(", ")}}',
-		description: 'Starts the workflow when a file is added to your Twake Drive',
+		description:
+			'Starts the workflow when a file of your Twake Drive changes, or when someone shares with you',
 		defaults: { name: 'Twake Drive Trigger' },
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
@@ -175,6 +178,22 @@ export class TwakeDriveNodeTrigger implements INodeType {
 						description:
 							'A file is added to your drive, by you or through one of your sharing links',
 					},
+					{
+						name: 'File Deleted',
+						value: 'deleted',
+						description: 'A file of your drive is moved to the trash',
+					},
+					{
+						name: 'File Updated',
+						value: 'updated',
+						description:
+							'The content of a file of your drive is replaced, by you, through a sharing link or in OnlyOffice',
+					},
+					{
+						name: 'Share Received',
+						value: 'shareReceived',
+						description: 'Someone shares a file, a folder or a drive with you',
+					},
 				],
 			},
 			{
@@ -198,12 +217,21 @@ export class TwakeDriveNodeTrigger implements INodeType {
 				displayOptions: { show: { watch: ['folder'] } },
 			},
 			{
+				displayName: 'MIME Types',
+				name: 'mimeTypes',
+				type: 'string',
+				default: '',
+				placeholder: 'application/pdf, image/*',
+				description:
+					'Only the files of these types start the workflow, separated by commas; empty for any type. Not used for Share Received.',
+			},
+			{
 				displayName: 'Include File',
 				name: 'includeFile',
 				type: 'boolean',
 				default: true,
 				description:
-					'Whether to read the file from your drive and output it as `file`, null when you cannot see it anymore',
+					'Whether to read the file from your drive and output it as `file`, null when you cannot see it anymore. For Share Received, `file` is the shortcut to the sharing in your drive, and `sharing` the sharing: who shares what.',
 			},
 		],
 	};

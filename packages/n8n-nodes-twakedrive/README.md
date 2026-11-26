@@ -44,12 +44,22 @@ Example workflow: save the invoices received by another node.
 
 ## Trigger
 
-The **Twake Drive Trigger** node starts a workflow when a file is added to your drive, by you or
-through one of your sharing links (**File Created**).
+The **Twake Drive Trigger** node starts a workflow on these **Events**:
+
+- **File Created**: a file is added to your drive, by you or through one of your sharing links.
+- **File Updated**: the content of a file is replaced, by you, through a sharing link, or when
+  OnlyOffice saves it. The instance groups the updates of a file: the first one opens a window, 30
+  seconds by default, and one event at its end tells the file as it is then. A workflow can thus
+  start up to 30 seconds after the change, once for several saves.
+- **File Deleted**: a file is moved to the trash.
+- **Share Received**: someone shares a file, a folder or a drive with you.
 
 **Watch** picks the files: **Any File**, or **Inside a Folder**, from the list or by ID. Only the
 files directly in the folder start the workflow, unless **Watch Subfolders** is on: the node then
-reads the path of the folder the file is in, and starts for a file at any depth.
+reads the path of the folder the file is in, and starts for a file at any depth. A deleted file
+counts in the folder it was in. **MIME Types** keeps the files of the listed types only, such as
+`application/pdf, image/*`: the node reads the file to know its type. These filters are for the
+files; a sharing is in no folder and always starts the workflow.
 
 It does not poll the instance. When the workflow is published, or listens for a test event, the node
 subscribes its webhook URL at the Twake webhook gateway (ADR 075); when the workflow is unpublished,
@@ -58,13 +68,16 @@ for other events is replaced. Each call is signed, and the node refuses one whos
 or older than five minutes.
 
 The gateway sends ids only. With **Include File** on, the default, the node reads the file with your
-token and outputs it as `file`, or `null` when you cannot see it anymore. Each item holds the event:
-`id`, `type`, `time`, `twakeorg`, `twakeactorid` (your uuid, absent for a file added through a sharing
-link) and `data.object` (the file's `id` and `folder.id`).
+token and outputs it as `file`, or `null` when you cannot see it anymore. For **Share Received**,
+`file` is the shortcut to the sharing in your drive, and `sharing` the sharing: who shares what, with
+whom, `null` when you cannot see it anymore. Each item holds the event: `id`, `type`, `time`, `twakeorg`,
+`twakeactorid` (your uuid, absent for a change through a sharing link, by OnlyOffice, or for a
+sharing) and `data.object` (the `id` and `folder.id` of the file, or the `id` and `shortcut.id` of
+the sharing).
 
-The instance publishes these events only when its context sets `drive_activity.file_created`, for
-the files uploaded to a personal drive, and once it knows your uuid from a login or a token exchange.
-The gateway delivers at least once, in no set order: deduplicate on `id` where it matters.
+The instance publishes the file events only when its context sets `drive_activity.file_events`, for
+the personal drive, and every event once it knows your uuid from a login or a token exchange. The
+gateway delivers at least once, in no set order: deduplicate on `id` where it matters.
 
 ## Credentials
 
