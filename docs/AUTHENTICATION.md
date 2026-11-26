@@ -36,6 +36,14 @@ preset SSO client, once the `n8n` client was added to the `jwt_config.audiences`
 is accepted, sending, editing and reacting work, and three runs used one `n8n` device. Before that
 change, Synapse answered `Invalid claim 'aud'`.
 
+Its trigger, **Twake Chat Trigger**, cannot send the Matrix token to the Twake webhook gateway: like
+the Twake Drive Trigger, it refreshes an SSO access token with the refresh token of the credential,
+caches it while it lasts, and sends that one, which must carry the audience of the gateway. It reads
+a message with the Matrix token. Not tested against a homeserver yet: Twake Chat publishes its events
+from twake-chat-side-service, once
+[linagora/twake-chat-side-service#18](https://github.com/linagora/twake-chat-side-service/pull/18)
+is deployed.
+
 ## Twake Project
 
 Twake Project calls its backend directly with the SSO access token (D8), which must carry the
@@ -76,8 +84,8 @@ so the user only clicks **Connect**.
    database, so they survive restarts and reach every worker.
 2. `POST` to that endpoint, with the token, a JSON object with one entry per credential type, such as
    `twakeDriveOAuth2Api`: `clientId`, `clientSecret` and `ssoUrl`, plus `apiUrl` for Calendar,
-   Chat (the homeserver), Contacts, Mail and Project, and `gatewayUrl` for Project (the Twake webhook
-   gateway, which the Twake Project Trigger needs). Never an entry for the parent `oAuth2Api`, which
+   Chat (the homeserver), Contacts, Mail and Project, and `gatewayUrl` for Chat, Drive and Project (the
+   Twake webhook gateway, which their triggers need). Never an entry for the parent `oAuth2Api`, which
    would apply to every OAuth2 credential of the instance.
 
 An overwrite only fills empty fields, so existing credentials keep their values. Tested on dev on

@@ -179,3 +179,16 @@ be taken back.
 
 What the backend calls itself does not change, such as the `twaketasks` audience of the token. Inside
 the node, the resources are still Project and Task.
+
+## D21. Twake Chat Trigger starts on direct messages and mentions (decided, 2026-11-26)
+
+The first **Twake Chat Trigger** has two events, to start simple: a message in a direct conversation,
+and a mention. The messages of the other rooms and the invitations come later.
+
+It follows what the new Twake Chat does: a direct conversation is in the clear, and a mention is in
+the `m.mentions` of the message. Another client may encrypt its direct conversations or fill no
+`m.mentions`, and its messages then start nothing.
+
+A message of a direct conversation and a message of another room will share one event type, told
+apart by the `kind` of the room in the delivery. The node ignores the rooms that are not direct until
+it has an event for them.
