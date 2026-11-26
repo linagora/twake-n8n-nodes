@@ -48,7 +48,9 @@ The **Twake Drive Trigger** node starts a workflow on these **Events**:
 
 - **File Created**: a file is added to your drive, by you or through one of your sharing links.
 - **File Updated**: the content of a file is replaced, by you, through a sharing link, or when
-  OnlyOffice saves it.
+  OnlyOffice saves it. The instance groups the updates of a file: the first one opens a window, 30
+  seconds by default, and one event at its end tells the file as it is then. A workflow can thus
+  start up to 30 seconds after the change, once for several saves.
 - **File Deleted**: a file is moved to the trash.
 - **Share Received**: someone shares a file, a folder or a drive with you.
 
