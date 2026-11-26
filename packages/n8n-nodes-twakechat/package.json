@@ -36,7 +36,8 @@
 			"dist/credentials/TwakeChatOAuth2Api.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/TwakeChat/TwakeChatNode.node.js"
+			"dist/nodes/TwakeChat/TwakeChatNode.node.js",
+			"dist/nodes/TwakeChatNodeTrigger/TwakeChatNodeTrigger.node.js"
 		]
 	},
 	"peerDependencies": {
