@@ -7,6 +7,8 @@ import type { IDataObject, IHttpRequestOptions } from 'n8n-workflow';
 import {
 	handleCall,
 	isInside,
+	matchesMime,
+	parseMimeTypes,
 	settingsError,
 	subscribe,
 	subscriptionExists,
@@ -36,20 +38,32 @@ const settings = (changes: Partial<Settings> = {}): Settings => ({
 	watch: 'anyFile',
 	folderId: '',
 	subfolders: false,
+	mimeTypes: [],
 	includeFile: false,
 	...changes,
 });
 
-const created = (folderId = 'invoices'): Delivery => ({
-	id: 'file-1',
-	type: 'com.twake.drive.file.created.v1',
+const fileEvent = (event: string, folderId = 'invoices'): Delivery => ({
+	id: `file-1/${event}`,
+	type: `com.twake.drive.file.${event}.v1`,
 	twakeactorid: me,
 	data: { object: { type: 'file', id: 'file-1', folder: { id: folderId } } },
 });
+const created = (folderId = 'invoices') => fileEvent('created', folderId);
+
+const shareReceived: Delivery = {
+	id: 'sharing-1/received',
+	type: 'com.twake.drive.share.received.v1',
+	data: { object: { type: 'sharing', id: 'sharing-1', shortcut: { id: 'shortcut-1' } } },
+};
 
 // The drive, as GET /files/:id answers: /Invoices/2026/march.pdf. A file has no path.
 const ENTRIES: Record<string, IDataObject> = {
-	'file-1': { id: 'file-1', attributes: { name: 'march.pdf', dir_id: '2026' } },
+	'file-1': {
+		id: 'file-1',
+		attributes: { name: 'march.pdf', dir_id: '2026', mime: 'application/pdf' },
+	},
+	'shortcut-1': { id: 'shortcut-1', attributes: { name: 'Invoices.url' } },
 	'2026': { id: '2026', attributes: { name: '2026', path: '/Invoices/2026' } },
 	invoices: { id: 'invoices', attributes: { name: 'Invoices', path: '/Invoices' } },
 	inv: { id: 'inv', attributes: { name: 'Inv', path: '/Inv' } },
@@ -68,6 +82,8 @@ async function deliver(
 		async (request, tolerated) => {
 			calls.push(request);
 			if (options.error) return fail(options.error, tolerated);
+			// A sharing you cannot see anymore.
+			if (request.url.startsWith('/sharings/')) return fail(forbidden(), tolerated);
 			const id = decodeURIComponent(request.url.replace('/files/', ''));
 			return ENTRIES[id] ? { data: ENTRIES[id] } : fail(notFound(), tolerated);
 		},
@@ -76,6 +92,7 @@ async function deliver(
 }
 
 const notFound = () => Object.assign(new Error('Not found'), { httpCode: '404' });
+const forbidden = () => Object.assign(new Error('Forbidden'), { httpCode: '403' });
 
 test('refuses a call with a bad signature', async () => {
 	const { outcome } = await deliver(created(), { signature: header(Buffer.from('{}')) });
@@ -172,4 +189,83 @@ test('subscribes to the file events, and replaces a subscription for other event
 		false,
 	);
 	assert.deepEqual(state, {});
+});
+
+test('starts on the files updated and deleted, in the folder they are or were in', async () => {
+	const all = settings({ events: ['created', 'updated', 'deleted'] });
+	for (const event of ['updated', 'deleted']) {
+		const { outcome } = await deliver(fileEvent(event), { settings: all });
+		assert.deepEqual(outcome, { action: 'start', json: fileEvent(event) });
+	}
+	const inFolder = settings({ events: ['deleted'], watch: 'folder', folderId: 'invoices' });
+	assert.equal(
+		(await deliver(fileEvent('deleted'), { settings: inFolder })).outcome.action,
+		'start',
+	);
+	assert.deepEqual(
+		(await deliver(fileEvent('updated'), { settings: inFolder })).outcome,
+		{ action: 'ignore' },
+		'an event that is not chosen',
+	);
+});
+
+test('MIME Types reads the file once, and starts only for a type in the list', async () => {
+	const pdf = settings({ mimeTypes: ['application/pdf'], includeFile: true });
+	const started = await deliver(created(), { settings: pdf });
+	assert.deepEqual(started.outcome, {
+		action: 'start',
+		json: { ...created(), file: ENTRIES['file-1'] },
+	});
+	assert.equal(started.calls.length, 1);
+	const images = settings({ mimeTypes: ['image/*'] });
+	assert.deepEqual((await deliver(created(), { settings: images })).outcome, { action: 'ignore' });
+	const gone = settings({ mimeTypes: ['application/pdf'] });
+	assert.deepEqual(
+		(await deliver(created(), { settings: gone, error: notFound() })).outcome,
+		{ action: 'ignore' },
+		'a file you cannot see has no type',
+	);
+});
+
+test('matchesMime and parseMimeTypes', () => {
+	assert.deepEqual(parseMimeTypes(' Application/PDF, image/* ,,'), ['application/pdf', 'image/*']);
+	assert.equal(matchesMime('image/png', ['image/*']), true);
+	assert.equal(matchesMime('application/pdf', ['application/pdf']), true);
+	assert.equal(matchesMime('application/pdfx', ['application/pdf']), false);
+	assert.equal(matchesMime(undefined, ['image/*']), false);
+});
+
+test('Share Received skips the file filters, and outputs the shortcut and the sharing', async () => {
+	const filtered = settings({
+		events: ['shareReceived'],
+		watch: 'folder',
+		folderId: 'invoices',
+		mimeTypes: ['image/*'],
+		includeFile: true,
+	});
+	const { outcome, calls } = await deliver(shareReceived, { settings: filtered });
+	assert.deepEqual(outcome, {
+		action: 'start',
+		json: { ...shareReceived, file: ENTRIES['shortcut-1'], sharing: null },
+	});
+	assert.deepEqual(
+		calls.map((call) => call.url),
+		['/files/shortcut-1', '/sharings/sharing-1'],
+	);
+});
+
+test('subscribes to the type of each event', async () => {
+	const calls: IHttpRequestOptions[] = [];
+	const gateway: Request = async (options) => {
+		calls.push(options);
+		return { id: 's1', secret: 'whsec_new', owner: me };
+	};
+	const all = settings({ events: ['created', 'updated', 'deleted', 'shareReceived'] });
+	await subscribe({}, gateway, 'https://n8n.example.com/webhook/x', all);
+	assert.deepEqual((calls[0]?.body as IDataObject).types, [
+		'com.twake.drive.file.created.v1',
+		'com.twake.drive.file.updated.v1',
+		'com.twake.drive.file.deleted.v1',
+		'com.twake.drive.share.received.v1',
+	]);
 });

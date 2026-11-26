@@ -26,7 +26,14 @@ export function isSignedBy(
 	return timingSafeEqual(expected, Buffer.from(given, 'hex'));
 }
 
-export const typeOf = (event: string) => `com.twake.drive.file.${event}.v1`;
+/** The CloudEvent type of an event of the Events parameter. */
+export const typeOf = (event: string) =>
+	event === 'shareReceived'
+		? 'com.twake.drive.share.received.v1'
+		: `com.twake.drive.file.${event}.v1`;
+
+const isFileEvent = (type: string | undefined) =>
+	type?.startsWith('com.twake.drive.file.') ?? false;
 
 export type Watch = 'anyFile' | 'folder';
 
@@ -37,7 +44,26 @@ export interface Settings {
 	/** The folder of Inside a Folder. */
 	folderId: string;
 	subfolders: boolean;
+	/** MIME types such as `application/pdf` or `image/*`, in lower case; empty for any type. */
+	mimeTypes: string[];
 	includeFile: boolean;
+}
+
+/** The MIME types of a comma-separated list, in lower case. */
+export function parseMimeTypes(list: string): string[] {
+	return list
+		.split(',')
+		.map((type) => type.trim().toLowerCase())
+		.filter((type) => type !== '');
+}
+
+/** Whether `mime` is one of `types`, where `image/*` stands for any image. */
+export function matchesMime(mime: unknown, types: string[]): boolean {
+	if (typeof mime !== 'string') return false;
+	const actual = mime.toLowerCase();
+	return types.some((type) =>
+		type.endsWith('/*') ? actual.startsWith(type.slice(0, -1)) : actual === type,
+	);
 }
 
 /** The subscription, kept in the node's static data. */
@@ -135,7 +161,9 @@ export async function unsubscribe(state: State, gateway: Request): Promise<boole
 
 export interface Delivery extends IDataObject {
 	type?: string;
-	data?: { object?: { id?: string; folder?: { id?: string } } };
+	data?: {
+		object?: { type?: string; id?: string; folder?: { id?: string }; shortcut?: { id?: string } };
+	};
 }
 
 /** A call of the gateway to the webhook. `now` is in seconds. */
@@ -155,12 +183,19 @@ export type Outcome =
 	| { action: 'ignore' }
 	| { action: 'start'; json: IDataObject };
 
-/** A file or folder as the instance shows it to you, or null when you cannot see it anymore. */
-async function readEntry(api: Request, id: string | undefined): Promise<IDataObject | null> {
+/** A document as the instance shows it to you, or null when you cannot see it. */
+async function read(
+	api: Request,
+	path: string,
+	id: string | undefined,
+): Promise<IDataObject | null> {
 	if (!id) return null;
-	const answer = await api({ method: 'GET', url: `/files/${encodeURIComponent(id)}` }, [403, 404]);
+	const answer = await api({ method: 'GET', url: `${path}/${encodeURIComponent(id)}` }, [403, 404]);
 	return (answer?.data as IDataObject | undefined) ?? null;
 }
+
+/** A file or folder as the instance shows it to you, or null when you cannot see it anymore. */
+const readEntry = (api: Request, id: string | undefined) => read(api, '/files', id);
 
 // The instance gives the path of a folder only, not of a file.
 const pathOf = (entry: IDataObject | null) => {
@@ -189,6 +224,15 @@ export async function handleCall(
 		return { action: 'ignore' };
 	}
 	const object = delivery.data?.object;
+	const json: IDataObject = { ...delivery };
+	if (!isFileEvent(delivery.type)) {
+		// A sharing is in no folder: the filters are for the files.
+		if (settings.includeFile) {
+			json.file = await readEntry(api, object?.shortcut?.id);
+			json.sharing = await read(api, '/sharings', object?.id);
+		}
+		return { action: 'start', json };
+	}
 	const parentId = object?.folder?.id;
 	if (settings.watch === 'folder' && parentId !== settings.folderId) {
 		if (!settings.subfolders) return { action: 'ignore' };
@@ -199,7 +243,14 @@ export async function handleCall(
 			return { action: 'ignore' };
 		}
 	}
-	const json: IDataObject = { ...delivery };
-	if (settings.includeFile) json.file = await readEntry(api, object?.id);
+	// The delivery has no MIME type: it is read from the file, in the trash for a deleted one.
+	let file: IDataObject | null | undefined;
+	if (settings.mimeTypes.length > 0) {
+		file = await readEntry(api, object?.id);
+		const mime = (file?.attributes as IDataObject | undefined)?.mime;
+		if (!matchesMime(mime, settings.mimeTypes)) return { action: 'ignore' };
+	}
+	if (settings.includeFile)
+		json.file = file === undefined ? await readEntry(api, object?.id) : file;
 	return { action: 'start', json };
 }
